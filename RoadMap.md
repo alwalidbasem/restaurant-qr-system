@@ -1,6 +1,9 @@
-In the first i plan to create this project form zero 
-so i create this files structure : 
+## In the first i plan to create this project form zero 
 
+
+#### so i create this files structure : 
+
+```txt
 Project Root : 
 
     -public : 
@@ -82,7 +85,7 @@ Project Root :
         -middleware :
             auth.php
             roles.php 
-
+```
 
 
 
