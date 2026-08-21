@@ -1,0 +1,24 @@
+
+@import url("./global/variables.css");
+@import url("./global/reset.css");
+@import url("./global/utilities.css");
+@import url("./global/buttons.css");
+
+@import url("./landing/loader.css");
+@import url("./landing/language-gate.css");
+@import url("./landing/navbar.css");
+@import url("./landing/hero.css");
+@import url("./landing/menu.css");
+@import url("./landing/food-card.css");
+@import url("./landing/modal.css");
+
+@import url("./orders/quantity-selector.css");
+@import url("./orders/order-drawer.css");
+@import url("./orders/order-item.css");
+@import url("./orders/toast.css");
+@import url("./orders/status-page.css");
+
+@import url("./landing/location.css");
+
+@import url("./landing/responsive.css");
+@import url("./orders/responsive.css");

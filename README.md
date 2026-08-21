@@ -5,4 +5,4 @@ A QR code is placed on each table in the restaurant. When scanned, the menu appe
 Programming language used : 
 HTML , CSS , JS , PHP NATIVE , SQL
 
-DB : MySql db 
+DB : MySql db

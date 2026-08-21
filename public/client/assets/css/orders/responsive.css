@@ -1,0 +1,7 @@
+@media (max-width: 520px) {
+  .order-drawer { width: 100vw; }
+
+  .qty-selector,.qty-value{
+    width: 100%;
+  }
+}

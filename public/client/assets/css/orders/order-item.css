@@ -1,0 +1,57 @@
+.order-item {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 0.85rem;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  animation: cardIn 0.35s var(--ease) both;
+}
+.order-item img {
+  width: 64px; height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+.order-item__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
+}
+.order-item__price {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.order-item__addons {
+  margin-top: 0.35rem;
+  display: grid;
+  gap: 0.12rem;
+  font-size: 0.78rem;
+  color: var(--color-text-faint);
+}
+.order-item__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.order-item__qty-btn {
+  width: 26px; height: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  font-size: 0.9rem;
+  transition: background var(--transition-fast);
+}
+.order-item__qty-btn:hover { background: rgba(244, 236, 224, 0.08); }
+.order-item__qty { font-family: var(--font-mono); font-size: 0.9rem; min-width: 18px; text-align: center; }
+.order-item__remove {
+  justify-self: end;
+  align-self: start;
+  color: var(--color-text-faint);
+  font-size: 1rem;
+  transition: color var(--transition-fast);
+}
+.order-item__remove:hover { color: var(--color-danger); }

@@ -1,0 +1,42 @@
+:root {
+  --color-bg: #1b140f;
+  --color-bg-alt: #221a14;
+  --color-surface: #2a2019;
+  --color-surface-raised: #322620;
+  --color-border: #3d2f26;
+
+  --color-text: #f4ece0;
+  --color-text-muted: #b9a696;
+  --color-text-faint: #8a7768;
+
+  --color-accent: #e0872f;
+  --color-accent-dark: #b85f1e;
+  --color-accent-soft: rgba(224, 135, 47, 0.14);
+  --color-ember: #c1441e;
+  --color-gold: #cba15c;
+
+  --color-success: #6f9c6a;
+  --color-danger: #c1441e;
+
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-body: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Space Mono", "Courier New", monospace;
+  --font-ar-display: "Noto Kufi Arabic", "Noto Sans Arabic", sans-serif;
+  --font-ar-body: "Noto Sans Arabic", "Tahoma", sans-serif;
+
+  --max-width: 1240px;
+  --nav-height: 84px;
+  --radius-sm: 6px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-fast: 0.2s var(--ease);
+  --transition-med: 0.4s var(--ease);
+}
+
+html[lang="ar"] {
+  --font-display: var(--font-ar-display);
+  --font-body: var(--font-ar-body);
+  --font-mono: var(--font-ar-body);
+}

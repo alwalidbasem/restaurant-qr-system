@@ -1,7 +1,7 @@
-## In the first i plan to create this project form zero 
+#### *this file show how i strat the project from zero to end
 
 
-#### so i create this files structure : 
+## Step One - File Structure
 
 ```txt
 Project Root : 
@@ -76,6 +76,7 @@ Project Root :
             TablesModel.php
             OrdersModel.php
             DiscountsModel.php
+            EmployeeModel.php
             LogModel.php
 
         -Middleware :
@@ -107,3 +108,9 @@ Project Root :
     .gitignore
     .htaccess
 ```
+
+
+
+
+## STEP TWO - Client front-end 
+### Create Clinet front-end with HTML & CSS , Js only (No Backend)

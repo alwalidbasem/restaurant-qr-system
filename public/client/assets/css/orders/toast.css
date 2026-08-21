@@ -1,0 +1,32 @@
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 300;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-accent);
+  color: var(--color-text);
+  padding: 0.9rem 1.4rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  box-shadow: 0 16px 40px -14px rgba(0,0,0,0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+  max-width: calc(100vw - 2.5rem);
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast::before {
+  content: "\f00c";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--color-accent);
+}

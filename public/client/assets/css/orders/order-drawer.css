@@ -1,0 +1,92 @@
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(10, 7, 5, 0.6);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.25s var(--ease);
+}
+
+.order-drawer {
+  position: fixed;
+  top: 0; right: 0;
+  z-index: 201;
+  height: 100%;
+  width: min(420px, 100vw);
+  background: var(--color-bg-alt);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.4s var(--ease);
+  box-shadow: -20px 0 60px -20px rgba(0,0,0,0.6);
+}
+.order-drawer.is-open { transform: translateX(0); }
+
+.order-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.order-drawer__header h3 {
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.order-drawer__header i { color: var(--color-accent); }
+
+.drawer-close {
+  width: 36px; height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  transition: background var(--transition-fast);
+}
+.drawer-close:hover { background: rgba(244, 236, 224, 0.08); }
+
+.order-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.order-drawer__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 2rem;
+  gap: 0.4rem;
+}
+.order-drawer__empty i { font-size: 2rem; color: var(--color-text-faint); margin-bottom: 0.75rem; }
+.order-drawer__empty p { font-weight: 700; color: var(--color-text); }
+.order-drawer__empty span { font-size: 0.9rem; }
+
+.order-drawer__footer {
+  padding: 1.25rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.order-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 1rem;
+}
+.order-total span { color: var(--color-text-muted); }
+.order-total strong {
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  color: var(--color-gold);
+}

@@ -1,0 +1,23 @@
+.qty-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.qty-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  transition: background var(--transition-fast);
+}
+.qty-btn:hover { background: rgba(244, 236, 224, 0.08); }
+.qty-value {
+  min-width: 36px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
