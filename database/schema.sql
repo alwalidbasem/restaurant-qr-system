@@ -17,8 +17,10 @@ CREATE TABLE menu_foods (
 
     description_en TEXT,
     description_ar TEXT,
+    image_url VARCHAR(255) NOT NULL,
 
     category_id INT UNSIGNED NOT NULL,
+
 
     FOREIGN KEY (category_id)
         REFERENCES menu_categories(id)
