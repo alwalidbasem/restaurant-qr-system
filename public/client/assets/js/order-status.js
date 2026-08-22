@@ -1,16 +1,27 @@
-import { STORAGE_KEY, LAST_ORDER_STORAGE_KEY, findItem, formatPrice } from "./data.js";
+import {
+  STORAGE_KEY,
+  LAST_ORDER_STORAGE_KEY,
+  SESSION_ORDER_KEY_STORAGE_KEY,
+  findItem,
+  formatPrice,
+  loadMenuItems
+} from "./data.js";
 import { escapeHtml } from "./ui.js";
 import { i18n } from "./i18n.js";
 
-export function initOrderStatus() {
+export async function initOrderStatus() {
   const page = document.getElementById("orderStatusPage");
   if (!page) return;
 
-  const order = getVisibleOrder();
+  await loadMenuItems();
+  const order = await getVisibleOrder();
   renderOrderStatus(order);
 }
 
-function getVisibleOrder() {
+async function getVisibleOrder() {
+  const apiOrder = await getOrderFromApi();
+  if (apiOrder) return apiOrder;
+
   const submitted = readJson(LAST_ORDER_STORAGE_KEY);
   if (submitted && Array.isArray(submitted.items)) {
     return submitted;
@@ -24,6 +35,96 @@ function getVisibleOrder() {
     items: Array.isArray(cartItems) ? cartItems : [],
     total: getItemsTotal(Array.isArray(cartItems) ? cartItems : [])
   };
+}
+
+async function getOrderFromApi() {
+  const params = new URLSearchParams(window.location.search);
+  const orderNumber = (params.get("order_number") || params.get("session_order_key") || "").trim();
+
+  if (!orderNumber || !window.ORDERS_API_URL) return null;
+
+  try {
+    const sessionOrderKey = getSessionOrderKey();
+    if (!sessionOrderKey || sessionOrderKey !== orderNumber) return null;
+
+    const url = new URL(window.ORDERS_API_URL, window.location.origin);
+    url.searchParams.set("session_order_key", orderNumber);
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        Accept: "application/json",
+        "SESSION-ORDER-KEY": sessionOrderKey
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Orders API returned ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const rows = Array.isArray(payload.data) ? payload.data : [];
+    const selectedRows = rows;
+
+    if (!selectedRows.length) return null;
+
+    return normalizeApiOrder(selectedRows, orderNumber);
+  } catch (err) {
+    console.warn("Could not load submitted order from API:", err);
+    return null;
+  }
+}
+
+function getSessionOrderKey() {
+  try {
+    return localStorage.getItem(SESSION_ORDER_KEY_STORAGE_KEY) || "";
+  } catch (err) {
+    return "";
+  }
+}
+
+function normalizeApiOrder(rows, orderNumber) {
+  const items = rows.map((row) => {
+    const details = parseDetails(row.details);
+
+    return {
+      id: String(row.food_id),
+      qty: Number(details.qty || 1),
+      addons: Array.isArray(details.addons)
+        ? details.addons.map((addon) => ({
+            id: String(addon.id),
+            name: getLocalizedAddonName(addon),
+            type: addon.type || "checkbox",
+            value: addon.value,
+            price: Number(addon.price || 0),
+            profit: Number(addon.profit || 0)
+          }))
+        : []
+    };
+  });
+
+  return {
+    id: orderNumber,
+    status: rows[0]?.status || "",
+    placedAt: rows[0]?.created_at || null,
+    items,
+    total: rows.reduce((sum, row) => sum + Number(row.price || 0), 0)
+  };
+}
+
+function parseDetails(details) {
+  if (!details) return {};
+
+  try {
+    const parsed = JSON.parse(details);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function getLocalizedAddonName(addon) {
+  const lang = document.documentElement.lang === "ar" ? "ar" : "en";
+  return addon[`name_${lang}`] || addon[`name_${lang === "ar" ? "en" : "ar"}`] || "";
 }
 
 function readJson(key) {

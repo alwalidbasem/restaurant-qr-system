@@ -1,38 +1,38 @@
 <?php
 
-require_once __DIR__ . '/../Models/EmployeeModel.php';
+require_once __DIR__ . '/../Models/InventoryModel.php';
 require_once __DIR__ . '/../Models/RestaurantModel.php';
-require_once __DIR__ . '/../Validators/EmployeeValidator.php';
+require_once __DIR__ . '/../Validators/InventoryValidator.php';
 
-class EmployeeController
+class InventoryController
 {
-    private Employee $employeeModel;
+    private Inventory $inventoryModel;
     private Restaurant $restaurantModel;
-    private EmployeeValidator $validator;
+    private InventoryValidator $validator;
 
     public function __construct(PDO $db)
     {
-        $this->employeeModel = new Employee($db);
+        $this->inventoryModel = new Inventory($db);
         $this->restaurantModel = new Restaurant($db);
-        $this->validator = new EmployeeValidator();
+        $this->validator = new InventoryValidator();
     }
 
     public function index(): void
     {
         $this->jsonResponse([
             'success' => true,
-            'data' => $this->employeeModel->getAll()
+            'data' => $this->inventoryModel->getAll()
         ]);
     }
 
     public function show(int $id): void
     {
-        $employee = $this->employeeModel->getById($id);
+        $item = $this->inventoryModel->getById($id);
 
-        if (!$employee) {
+        if (!$item) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Employee not found.'
+                'message' => 'Inventory item not found.'
             ], 404);
 
             return;
@@ -40,7 +40,7 @@ class EmployeeController
 
         $this->jsonResponse([
             'success' => true,
-            'data' => $employee
+            'data' => $item
         ]);
     }
 
@@ -60,35 +60,35 @@ class EmployeeController
         }
 
         try {
-            $employeeId = $this->employeeModel->create($data);
+            $itemId = $this->inventoryModel->create($data);
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => 'Employee created successfully.',
-                'data' => $this->employeeModel->getById($employeeId)
+                'message' => 'Inventory item created successfully.',
+                'data' => $this->inventoryModel->getById($itemId)
             ], 201);
         } catch (PDOException $e) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Failed to create employee.'
+                'message' => 'Failed to create inventory item.'
             ], 500);
         }
     }
 
     public function update(int $id): void
     {
-        $employee = $this->employeeModel->getById($id);
+        $item = $this->inventoryModel->getById($id);
 
-        if (!$employee) {
+        if (!$item) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Employee not found.'
+                'message' => 'Inventory item not found.'
             ], 404);
 
             return;
         }
 
-        $data = array_merge($employee, $this->getJsonInput());
+        $data = array_merge($item, $this->getJsonInput());
         $errors = $this->validator->validateUpdate($data);
         $this->validateRestaurant($data, $errors);
 
@@ -101,31 +101,31 @@ class EmployeeController
             return;
         }
 
-        $this->employeeModel->update($id, $data);
+        $this->inventoryModel->update($id, $data);
 
         $this->jsonResponse([
             'success' => true,
-            'message' => 'Employee updated successfully.',
-            'data' => $this->employeeModel->getById($id)
+            'message' => 'Inventory item updated successfully.',
+            'data' => $this->inventoryModel->getById($id)
         ]);
     }
 
     public function destroy(int $id): void
     {
-        if (!$this->employeeModel->exists($id)) {
+        if (!$this->inventoryModel->exists($id)) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Employee not found.'
+                'message' => 'Inventory item not found.'
             ], 404);
 
             return;
         }
 
-        $this->employeeModel->delete($id);
+        $this->inventoryModel->delete($id);
 
         $this->jsonResponse([
             'success' => true,
-            'message' => 'Employee deleted successfully.'
+            'message' => 'Inventory item deleted successfully.'
         ]);
     }
 

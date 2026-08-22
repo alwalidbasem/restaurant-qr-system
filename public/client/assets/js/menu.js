@@ -1,4 +1,4 @@
-import { state, FOOD_ITEMS, findItem, formatPrice } from "./data.js";
+import { state, FOOD_ITEMS, findItem, formatPrice, loadMenuItems } from "./data.js";
 import { addToOrder, ORDER_EVENT } from "./order.js";
 import { showToast, escapeHtml, ESCAPE_EVENT } from "./ui.js";
 import { i18n } from "./i18n.js";
@@ -18,7 +18,7 @@ function isTwoStep() {
   return true;
 }
 
-export function initMenu() {
+export async function initMenu() {
   menuCategorySelect = document.getElementById("menuCategory");
   foodGrid = document.getElementById("foodGrid");
   emptyState = document.getElementById("emptyState");
@@ -47,6 +47,8 @@ export function initMenu() {
 
   if (!menuCategorySelect || !foodGrid || !emptyState) return;
 
+  await loadMenuItems();
+  renderCategoryOptions();
   renderFoodGrid();
 
   menuCategorySelect.addEventListener("change", (e) => {
@@ -66,8 +68,8 @@ export function initMenu() {
   });
 
   if (modalAddonsList) {
-    modalAddonsList.addEventListener("change", syncModalAddons);
-    modalAddonsList.addEventListener("input", syncModalAddons);
+    modalAddonsList.addEventListener("change", syncModalAddonsWithoutJump);
+    modalAddonsList.addEventListener("input", syncModalAddonsWithoutJump);
   }
 
   modalCloseBtn.addEventListener("click", closeModal);
@@ -131,6 +133,19 @@ function renderFoodGrid() {
   foodGrid.insertAdjacentHTML("beforeend", cardsHtml);
 }
 
+function renderCategoryOptions() {
+  const categories = getMenuCategories();
+  const allLabel = menuCategorySelect.querySelector('option[value="all"]')?.textContent || "All";
+
+  menuCategorySelect.innerHTML = `<option value="all">${escapeHtml(allLabel)}</option>`;
+  menuCategorySelect.insertAdjacentHTML(
+    "beforeend",
+    categories
+      .map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`)
+      .join("")
+  );
+}
+
 function buildFoodCardHtml(item) {
   return `
     <article class="food-card" data-id="${item.id}">
@@ -153,8 +168,23 @@ function buildFoodCardHtml(item) {
 
 function getFilteredItems() {
   return FOOD_ITEMS.filter((item) => {
-    return state.category === "all" || item.category === state.category;
+    return state.category === "all" || String(item.categoryId || item.category) === String(state.category);
   });
+}
+
+function getMenuCategories() {
+  const seen = new Map();
+
+  FOOD_ITEMS.forEach((item) => {
+    const id = String(item.categoryId || item.category || "");
+    if (!id || seen.has(id)) return;
+    seen.set(id, {
+      id,
+      name: item.category || id
+    });
+  });
+
+  return Array.from(seen.values());
 }
 
 function openModal(id) {
@@ -256,6 +286,33 @@ function resetModalScroll() {
   scrollToTop();
   requestAnimationFrame(scrollToTop);
   setTimeout(scrollToTop, 50);
+}
+
+function syncModalAddonsWithoutJump() {
+  const scrollTargets = [
+    modalBackdrop,
+    foodModal,
+    foodModal?.querySelector(".modal__body"),
+    modalAddonsList
+  ]
+    .filter(Boolean)
+    .map((element) => ({
+      element,
+      top: element.scrollTop,
+      left: element.scrollLeft
+    }));
+
+  syncModalAddons();
+
+  const restoreScroll = () => {
+    scrollTargets.forEach(({ element, top, left }) => {
+      element.scrollTop = top;
+      element.scrollLeft = left;
+    });
+  };
+
+  restoreScroll();
+  requestAnimationFrame(restoreScroll);
 }
 
 function addActiveItemToOrder({ includeAddons, button }) {
@@ -411,7 +468,8 @@ function getSelectedAddons(item) {
         name: addon.name,
         type: addon.type,
         value,
-        price: addon.type === "input" ? 0 : Number(addon.price || 0)
+        price: addon.type === "input" ? 0 : Number(addon.price || 0),
+        profit: addon.type === "input" ? 0 : Number(addon.profit || 0)
       });
     });
   });

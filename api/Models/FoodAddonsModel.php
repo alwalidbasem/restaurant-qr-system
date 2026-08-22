@@ -1,6 +1,6 @@
 <?php
 
-class Category
+class FoodAddon
 {
     private PDO $db;
 
@@ -12,14 +12,22 @@ class Category
     public function getAll(?int $restaurantId = null): array
     {
         $restaurantSql = $restaurantId !== null
-            ? " WHERE restaurant_id = :restaurant_id"
+            ? " WHERE addons.restaurant_id = :restaurant_id"
             : "";
 
         $stmt = $this->db->prepare("
-            SELECT *
-            FROM menu_categories
+            SELECT
+                addons.*,
+                foods.name_en AS food_name_en,
+                foods.name_ar AS food_name_ar,
+                restaurants.name AS restaurant_name
+            FROM food_addons addons
+            INNER JOIN menu_foods foods
+                ON foods.id = addons.food_id
+            INNER JOIN restaurants
+                ON restaurants.id = addons.restaurant_id
             $restaurantSql
-            ORDER BY id ASC
+            ORDER BY addons.id ASC
         ");
 
         $params = [];
@@ -35,36 +43,44 @@ class Category
     public function getById(int $id): ?array
     {
         $stmt = $this->db->prepare("
-            SELECT *
-            FROM menu_categories
-            WHERE id = :id
+            SELECT
+                addons.*,
+                foods.name_en AS food_name_en,
+                foods.name_ar AS food_name_ar,
+                restaurants.name AS restaurant_name
+            FROM food_addons addons
+            INNER JOIN menu_foods foods
+                ON foods.id = addons.food_id
+            INNER JOIN restaurants
+                ON restaurants.id = addons.restaurant_id
+            WHERE addons.id = :id
             LIMIT 1
         ");
 
-        $stmt->execute([
-            ':id' => $id
-        ]);
+        $stmt->execute([':id' => $id]);
 
-        $category = $stmt->fetch(PDO::FETCH_ASSOC);
+        $addon = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $category ?: null;
+        return $addon ?: null;
     }
 
     public function create(array $data): int
     {
         $stmt = $this->db->prepare("
-            INSERT INTO menu_categories (
+            INSERT INTO food_addons (
                 name_ar,
                 name_en,
-                description_ar,
-                description_en,
+                food_id,
+                extra_price,
+                extra_profit,
                 restaurant_id
             )
             VALUES (
                 :name_ar,
                 :name_en,
-                :description_ar,
-                :description_en,
+                :food_id,
+                :extra_price,
+                :extra_profit,
                 :restaurant_id
             )
         ");
@@ -72,8 +88,9 @@ class Category
         $stmt->execute([
             ':name_ar' => $data['name_ar'],
             ':name_en' => $data['name_en'],
-            ':description_ar' => $data['description_ar'] ?? null,
-            ':description_en' => $data['description_en'] ?? null,
+            ':food_id' => $data['food_id'],
+            ':extra_price' => $data['extra_price'] ?? 0,
+            ':extra_profit' => $data['extra_profit'] ?? 0,
             ':restaurant_id' => $data['restaurant_id']
         ]);
 
@@ -83,23 +100,23 @@ class Category
     public function update(int $id, array $data): bool
     {
         $stmt = $this->db->prepare("
-            UPDATE menu_categories
-
+            UPDATE food_addons
             SET
                 name_ar = :name_ar,
                 name_en = :name_en,
-                description_ar = :description_ar,
-                description_en = :description_en,
+                food_id = :food_id,
+                extra_price = :extra_price,
+                extra_profit = :extra_profit,
                 restaurant_id = :restaurant_id
-
             WHERE id = :id
         ");
 
         return $stmt->execute([
             ':name_ar' => $data['name_ar'],
             ':name_en' => $data['name_en'],
-            ':description_ar' => $data['description_ar'] ?? null,
-            ':description_en' => $data['description_en'] ?? null,
+            ':food_id' => $data['food_id'],
+            ':extra_price' => $data['extra_price'],
+            ':extra_profit' => $data['extra_profit'],
             ':restaurant_id' => $data['restaurant_id'],
             ':id' => $id
         ]);
@@ -108,13 +125,11 @@ class Category
     public function delete(int $id): bool
     {
         $stmt = $this->db->prepare("
-            DELETE FROM menu_categories
+            DELETE FROM food_addons
             WHERE id = :id
         ");
 
-        return $stmt->execute([
-            ':id' => $id
-        ]);
+        return $stmt->execute([':id' => $id]);
     }
 
     public function exists(int $id): bool

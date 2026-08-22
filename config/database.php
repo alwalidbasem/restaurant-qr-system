@@ -1,4 +1,5 @@
 <?php
+    require __DIR__ . '/env.php';
     $servername = $_ENV['servername'];
     $username = $_ENV['username'];
     $password = $_ENV['password'];

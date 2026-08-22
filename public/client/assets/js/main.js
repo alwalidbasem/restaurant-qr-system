@@ -5,12 +5,12 @@ import { initOrderStatus } from "./order-status.js";
 import { initUI } from "./ui.js";
 import { initLanguageGate } from "./language.js";
 
-function init() {
+async function init() {
   initLanguageGate();
-  initOrder();
-  initOrderStatus();
-  initMenu();
   initUI();
+  await initMenu();
+  initOrder();
+  await initOrderStatus();
 }
 
 document.addEventListener("DOMContentLoaded", init);

@@ -1,3 +1,8 @@
+<script>
+  window.CURRENT_LANGUAGE_CODE = <?= json_encode(current_language_code(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+  window.MENU_FOODS_API_URL = window.MENU_FOODS_API_URL || <?= json_encode(app_url('api/menu-foods'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+</script>
+
 <div class="site-loader" id="siteLoader" role="status" aria-live="polite" aria-label="<?= t('loader_aria'); ?>">
   <div class="site-loader__logo" aria-hidden="true">
     <span class="site-loader__mark"><?= app_logo_img('site-loader__logo-img'); ?></span>
@@ -63,12 +68,6 @@
         <span class="sr-only"><?= t('menu_filter_sr'); ?></span>
         <select id="menuCategory" aria-label="<?= t('menu_filter_aria'); ?>">
           <option value="all"><?= t('menu_all'); ?></option>
-          <option value="Burgers">Burgers</option>
-          <option value="Pizza">Pizza</option>
-          <option value="Main Dishes">Main Dishes</option>
-          <option value="Appetizers">Appetizers</option>
-          <option value="Desserts">Desserts</option>
-          <option value="Drinks">Drinks</option>
         </select>
         <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
       </label>

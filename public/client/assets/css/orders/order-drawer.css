@@ -67,6 +67,10 @@
   padding: 2rem;
   gap: 0.4rem;
 }
+.order-drawer__empty[hidden],
+.order-drawer__footer[hidden] {
+  display: none;
+}
 .order-drawer__empty i { font-size: 2rem; color: var(--color-text-faint); margin-bottom: 0.75rem; }
 .order-drawer__empty p { font-weight: 700; color: var(--color-text); }
 .order-drawer__empty span { font-size: 0.9rem; }

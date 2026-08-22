@@ -1,38 +1,43 @@
 <?php
 
-require_once __DIR__ . '/../Models/EmployeeModel.php';
+require_once __DIR__ . '/../Models/FoodAddonsModel.php';
+require_once __DIR__ . '/../Models/FoodModel.php';
 require_once __DIR__ . '/../Models/RestaurantModel.php';
-require_once __DIR__ . '/../Validators/EmployeeValidator.php';
+require_once __DIR__ . '/../Validators/FoodAddonsValidator.php';
 
-class EmployeeController
+class FoodAddonsController
 {
-    private Employee $employeeModel;
+    private FoodAddon $addonModel;
+    private Food $foodModel;
     private Restaurant $restaurantModel;
-    private EmployeeValidator $validator;
+    private FoodAddonsValidator $validator;
 
     public function __construct(PDO $db)
     {
-        $this->employeeModel = new Employee($db);
+        $this->addonModel = new FoodAddon($db);
+        $this->foodModel = new Food($db);
         $this->restaurantModel = new Restaurant($db);
-        $this->validator = new EmployeeValidator();
+        $this->validator = new FoodAddonsValidator();
     }
 
     public function index(): void
     {
+        $restaurantId = $this->getRestaurantIdFromQuery();
+
         $this->jsonResponse([
             'success' => true,
-            'data' => $this->employeeModel->getAll()
+            'data' => $this->addonModel->getAll($restaurantId)
         ]);
     }
 
     public function show(int $id): void
     {
-        $employee = $this->employeeModel->getById($id);
+        $addon = $this->addonModel->getById($id);
 
-        if (!$employee) {
+        if (!$addon) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Employee not found.'
+                'message' => 'Food addon not found.'
             ], 404);
 
             return;
@@ -40,7 +45,7 @@ class EmployeeController
 
         $this->jsonResponse([
             'success' => true,
-            'data' => $employee
+            'data' => $addon
         ]);
     }
 
@@ -48,7 +53,7 @@ class EmployeeController
     {
         $data = $this->getJsonInput();
         $errors = $this->validator->validateCreate($data);
-        $this->validateRestaurant($data, $errors);
+        $this->validateReferences($data, $errors);
 
         if (!empty($errors)) {
             $this->jsonResponse([
@@ -60,37 +65,37 @@ class EmployeeController
         }
 
         try {
-            $employeeId = $this->employeeModel->create($data);
+            $addonId = $this->addonModel->create($data);
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => 'Employee created successfully.',
-                'data' => $this->employeeModel->getById($employeeId)
+                'message' => 'Food addon created successfully.',
+                'data' => $this->addonModel->getById($addonId)
             ], 201);
         } catch (PDOException $e) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Failed to create employee.'
+                'message' => 'Failed to create food addon.'
             ], 500);
         }
     }
 
     public function update(int $id): void
     {
-        $employee = $this->employeeModel->getById($id);
+        $addon = $this->addonModel->getById($id);
 
-        if (!$employee) {
+        if (!$addon) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Employee not found.'
+                'message' => 'Food addon not found.'
             ], 404);
 
             return;
         }
 
-        $data = array_merge($employee, $this->getJsonInput());
+        $data = array_merge($addon, $this->getJsonInput());
         $errors = $this->validator->validateUpdate($data);
-        $this->validateRestaurant($data, $errors);
+        $this->validateReferences($data, $errors);
 
         if (!empty($errors)) {
             $this->jsonResponse([
@@ -101,36 +106,40 @@ class EmployeeController
             return;
         }
 
-        $this->employeeModel->update($id, $data);
+        $this->addonModel->update($id, $data);
 
         $this->jsonResponse([
             'success' => true,
-            'message' => 'Employee updated successfully.',
-            'data' => $this->employeeModel->getById($id)
+            'message' => 'Food addon updated successfully.',
+            'data' => $this->addonModel->getById($id)
         ]);
     }
 
     public function destroy(int $id): void
     {
-        if (!$this->employeeModel->exists($id)) {
+        if (!$this->addonModel->exists($id)) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Employee not found.'
+                'message' => 'Food addon not found.'
             ], 404);
 
             return;
         }
 
-        $this->employeeModel->delete($id);
+        $this->addonModel->delete($id);
 
         $this->jsonResponse([
             'success' => true,
-            'message' => 'Employee deleted successfully.'
+            'message' => 'Food addon deleted successfully.'
         ]);
     }
 
-    private function validateRestaurant(array $data, array &$errors): void
+    private function validateReferences(array $data, array &$errors): void
     {
+        if (!isset($errors['food_id']) && !$this->foodModel->exists((int) $data['food_id'])) {
+            $errors['food_id'] = 'Food does not exist.';
+        }
+
         if (!isset($errors['restaurant_id']) && !$this->restaurantModel->exists((int) $data['restaurant_id'])) {
             $errors['restaurant_id'] = 'Restaurant does not exist.';
         }
@@ -141,6 +150,15 @@ class EmployeeController
         $data = json_decode((string) file_get_contents('php://input'), true);
 
         return is_array($data) ? $data : [];
+    }
+
+    private function getRestaurantIdFromQuery(): ?int
+    {
+        $restaurantId = filter_input(INPUT_GET, 'restaurant_id', FILTER_VALIDATE_INT);
+
+        return ($restaurantId !== false && $restaurantId !== null && $restaurantId > 0)
+            ? $restaurantId
+            : null;
     }
 
     private function jsonResponse(array $data, int $statusCode = 200): void

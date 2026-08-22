@@ -2,6 +2,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.75rem;
+  justify-content: center;
 }
 
 .food-card {
@@ -13,6 +14,7 @@
   flex-direction: column;
   transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
   animation: cardIn 0.5s var(--ease) both;
+  max-width: 100%;
 }
 .food-card:hover {
   transform: translateY(-6px);

@@ -1,12 +1,12 @@
 <?php
 
-class FoodValidator
+class FoodAddonsValidator
 {
     public function validateCreate(array $data): array
     {
         $errors = [];
 
-        foreach (['name_ar', 'name_en', 'image_url'] as $field) {
+        foreach (['name_ar', 'name_en'] as $field) {
             if (!isset($data[$field]) || trim((string) $data[$field]) === '') {
                 $errors[$field] = str_replace('_', ' ', ucfirst($field)) . ' is required.';
             } elseif (strlen((string) $data[$field]) > 255) {
@@ -14,23 +14,7 @@ class FoodValidator
             }
         }
 
-        foreach (['description_ar', 'description_en'] as $field) {
-            if (isset($data[$field]) && !is_string($data[$field])) {
-                $errors[$field] = str_replace('_', ' ', ucfirst($field)) . ' must be text.';
-            }
-        }
-
-        if (!isset($data['price'])) {
-            $errors['price'] = 'Price is required.';
-        } elseif (!is_numeric($data['price']) || (float) $data['price'] < 0) {
-            $errors['price'] = 'Price must be a valid positive number.';
-        }
-
-        if (isset($data['profit']) && (!is_numeric($data['profit']) || (float) $data['profit'] < 0)) {
-            $errors['profit'] = 'Profit must be a valid non-negative number.';
-        }
-
-        foreach (['category_id', 'restaurant_id'] as $field) {
+        foreach (['food_id', 'restaurant_id'] as $field) {
             if (!isset($data[$field])) {
                 $errors[$field] = str_replace('_', ' ', ucfirst($field)) . ' is required.';
             } elseif (
@@ -38,6 +22,12 @@ class FoodValidator
                 (int) $data[$field] <= 0
             ) {
                 $errors[$field] = str_replace('_', ' ', ucfirst($field)) . ' must be a valid positive integer.';
+            }
+        }
+
+        foreach (['extra_price', 'extra_profit'] as $field) {
+            if (isset($data[$field]) && (!is_numeric($data[$field]) || (float) $data[$field] < 0)) {
+                $errors[$field] = str_replace('_', ' ', ucfirst($field)) . ' must be a valid non-negative number.';
             }
         }
 

@@ -3,6 +3,8 @@ DirectoryIndex index.php
 RewriteEngine On
 RewriteBase /Portfolio/
 
+RewriteRule ^api/?(.*)$ routes/api.php?route=$1 [L,QSA]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ index.php [L]
+RewriteRule ^ index.php [L,QSA]

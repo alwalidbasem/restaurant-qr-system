@@ -1,38 +1,35 @@
 <?php
 
-require_once __DIR__ . '/../Models/EmployeeModel.php';
 require_once __DIR__ . '/../Models/RestaurantModel.php';
-require_once __DIR__ . '/../Validators/EmployeeValidator.php';
+require_once __DIR__ . '/../Validators/RestaurantValidator.php';
 
-class EmployeeController
+class RestaurantController
 {
-    private Employee $employeeModel;
     private Restaurant $restaurantModel;
-    private EmployeeValidator $validator;
+    private RestaurantValidator $validator;
 
     public function __construct(PDO $db)
     {
-        $this->employeeModel = new Employee($db);
         $this->restaurantModel = new Restaurant($db);
-        $this->validator = new EmployeeValidator();
+        $this->validator = new RestaurantValidator();
     }
 
     public function index(): void
     {
         $this->jsonResponse([
             'success' => true,
-            'data' => $this->employeeModel->getAll()
+            'data' => $this->restaurantModel->getAll()
         ]);
     }
 
     public function show(int $id): void
     {
-        $employee = $this->employeeModel->getById($id);
+        $restaurant = $this->restaurantModel->getById($id);
 
-        if (!$employee) {
+        if (!$restaurant) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Employee not found.'
+                'message' => 'Restaurant not found.'
             ], 404);
 
             return;
@@ -40,7 +37,7 @@ class EmployeeController
 
         $this->jsonResponse([
             'success' => true,
-            'data' => $employee
+            'data' => $restaurant
         ]);
     }
 
@@ -48,7 +45,6 @@ class EmployeeController
     {
         $data = $this->getJsonInput();
         $errors = $this->validator->validateCreate($data);
-        $this->validateRestaurant($data, $errors);
 
         if (!empty($errors)) {
             $this->jsonResponse([
@@ -60,37 +56,36 @@ class EmployeeController
         }
 
         try {
-            $employeeId = $this->employeeModel->create($data);
+            $restaurantId = $this->restaurantModel->create($data);
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => 'Employee created successfully.',
-                'data' => $this->employeeModel->getById($employeeId)
+                'message' => 'Restaurant created successfully.',
+                'data' => $this->restaurantModel->getById($restaurantId)
             ], 201);
         } catch (PDOException $e) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Failed to create employee.'
+                'message' => 'Failed to create restaurant.'
             ], 500);
         }
     }
 
     public function update(int $id): void
     {
-        $employee = $this->employeeModel->getById($id);
+        $restaurant = $this->restaurantModel->getById($id);
 
-        if (!$employee) {
+        if (!$restaurant) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Employee not found.'
+                'message' => 'Restaurant not found.'
             ], 404);
 
             return;
         }
 
-        $data = array_merge($employee, $this->getJsonInput());
+        $data = array_merge($restaurant, $this->getJsonInput());
         $errors = $this->validator->validateUpdate($data);
-        $this->validateRestaurant($data, $errors);
 
         if (!empty($errors)) {
             $this->jsonResponse([
@@ -101,39 +96,32 @@ class EmployeeController
             return;
         }
 
-        $this->employeeModel->update($id, $data);
+        $this->restaurantModel->update($id, $data);
 
         $this->jsonResponse([
             'success' => true,
-            'message' => 'Employee updated successfully.',
-            'data' => $this->employeeModel->getById($id)
+            'message' => 'Restaurant updated successfully.',
+            'data' => $this->restaurantModel->getById($id)
         ]);
     }
 
     public function destroy(int $id): void
     {
-        if (!$this->employeeModel->exists($id)) {
+        if (!$this->restaurantModel->exists($id)) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Employee not found.'
+                'message' => 'Restaurant not found.'
             ], 404);
 
             return;
         }
 
-        $this->employeeModel->delete($id);
+        $this->restaurantModel->delete($id);
 
         $this->jsonResponse([
             'success' => true,
-            'message' => 'Employee deleted successfully.'
+            'message' => 'Restaurant deleted successfully.'
         ]);
-    }
-
-    private function validateRestaurant(array $data, array &$errors): void
-    {
-        if (!isset($errors['restaurant_id']) && !$this->restaurantModel->exists((int) $data['restaurant_id'])) {
-            $errors['restaurant_id'] = 'Restaurant does not exist.';
-        }
     }
 
     private function getJsonInput(): array

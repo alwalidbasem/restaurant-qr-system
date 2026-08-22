@@ -37,6 +37,7 @@
   animation: modalIn 0.35s var(--ease);
   scrollbar-width: thin;
   scrollbar-color: var(--color-accent) rgba(244, 236, 224, 0.08);
+  overflow-anchor: none;
 }
 
 .modal::-webkit-scrollbar {
@@ -117,6 +118,7 @@
   display: flex;
   flex-direction: column;
   padding: 1.9rem clamp(1.35rem, 3vw, 2.35rem) 1.65rem;
+  overflow-anchor: none;
 }
 
 .modal__category {
@@ -178,6 +180,7 @@
   grid-auto-flow: row;
   height: 250px;
   align-content: start;
+  overflow-anchor: none;
 
 }
 
@@ -227,11 +230,23 @@
 }
 
 .addon-checkbox {
+  position: relative;
+  width: 32px;
+  height: 32px;
   display: inline-grid;
   place-items: center;
 }
 
-.addon-checkbox input,
+.addon-checkbox input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .addon-switch__input {
   position: absolute;
   opacity: 0;
@@ -651,6 +666,7 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
     grid-column: 2;
     display: flex;
     width: 100%;
+    height: 46px;
   }
 /* Step two: extras on the left, full bill + Add to cart on the right */
   .modal.modal--two-step.modal--step-two {
