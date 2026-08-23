@@ -6,6 +6,7 @@ require_once __DIR__ . '/../api/Controllers/FoodController.php';
 require_once __DIR__ . '/../api/Controllers/CategoriesController.php';
 require_once __DIR__ . '/../api/Controllers/RestaurantController.php';
 require_once __DIR__ . '/../api/Controllers/EmployeeController.php';
+require_once __DIR__ . '/../api/Controllers/AuthController.php';
 require_once __DIR__ . '/../api/Controllers/InventoryController.php';
 require_once __DIR__ . '/../api/Controllers/FoodAddonsController.php';
 require_once __DIR__ . '/../api/Controllers/OrdersController.php';
@@ -22,6 +23,42 @@ if (($segments[0] ?? null) !== 'api') {
 $resource = $segments[1] ?? null;
 $id = isset($segments[2]) ? (int) $segments[2] : null;
 $action = $segments[3] ?? null;
+
+
+if ($resource === 'auth') {
+    $controller = new AuthController($conn);
+    $authAction = $segments[2] ?? null;
+
+    if ($method === 'POST' && $authAction === 'login') {
+        $controller->login();
+        exit;
+    }
+
+    if ($method === 'GET' && $authAction === 'me') {
+        $controller->me();
+        exit;
+    }
+
+    if ($method === 'POST' && $authAction === 'logout') {
+        $controller->logout();
+        exit;
+    }
+
+    if ($method === 'POST' && $authAction === 'verify-password') {
+        $controller->verifyPassword();
+        exit;
+    }
+
+    if ($method === 'POST' && $authAction === 'change-password') {
+        $controller->changePassword();
+        exit;
+    }
+
+    if ($method === 'POST' && $authAction === 'reset-password') {
+        $controller->resetPassword();
+        exit;
+    }
+}
 
 
 if ($resource === 'restaurants') {

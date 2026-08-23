@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Restaurant dining table</title>
+  <desc id="desc">A gray restaurant table with two chairs and a covered food dish</desc>
+
+  <g stroke="#737373" stroke-width="3.25" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Covered serving dish -->
+    <path d="M24 24.5c.7-5.1 3.7-8 8-8s7.3 2.9 8 8"/>
+    <path d="M21 24.5h22"/>
+    <path d="M32 16.5v-3"/>
+    <path d="M29.5 13.5h5"/>
+
+    <!-- Table -->
+    <path d="M15 30h34"/>
+    <path d="M18 30v5h28v-5"/>
+    <path d="M22 35 19 55"/>
+    <path d="M42 35 45 55"/>
+
+    <!-- Left chair -->
+    <path d="M4.5 32v14h12"/>
+    <path d="M7.5 46 6 55"/>
+    <path d="M15 46l2 9"/>
+    <path d="M4.5 36H15"/>
+
+    <!-- Right chair -->
+    <path d="M59.5 32v14h-12"/>
+    <path d="M56.5 46 58 55"/>
+    <path d="M49 46l-2 9"/>
+    <path d="M59.5 36H49"/>
+  </g>
+</svg>
