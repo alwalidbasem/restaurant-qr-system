@@ -165,8 +165,6 @@ CREATE TABLE tables (
 
 CREATE TABLE orders (
     order_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-
-    food_id INT UNSIGNED NOT NULL,
     table_id INT UNSIGNED NOT NULL,
 
     status ENUM(
@@ -174,9 +172,35 @@ CREATE TABLE orders (
         'canceled',
         'finished'
     ) NOT NULL DEFAULT 'waiting',
-
     extra_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    profit DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    details TEXT NULL,
+    session_order_key VARCHAR(255) NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    restaurant_id INT UNSIGNED NOT NULL,
+
+    FOREIGN KEY (table_id)
+        REFERENCES tables(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    FOREIGN KEY (restaurant_id)
+        REFERENCES restaurants(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE order_foods (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_id INT UNSIGNED NOT NULL,
+    food_id INT UNSIGNED NOT NULL,
+    table_id INT UNSIGNED NOT NULL,
+
+    price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    extra_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     profit DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
 
     details TEXT NULL,
@@ -185,6 +209,12 @@ CREATE TABLE orders (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     restaurant_id INT UNSIGNED NOT NULL,
+
+
+    FOREIGN KEY (order_id)
+        REFERENCES orders(order_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
 
     FOREIGN KEY (food_id)
         REFERENCES menu_foods(id)

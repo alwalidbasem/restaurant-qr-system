@@ -45,20 +45,37 @@ class Order
 
         $stmt = $this->db->prepare("
             SELECT
-                orders.*,
+                orders.order_id,
+                orders.table_id,
+                orders.status,
+                orders.session_order_key,
+                orders.created_at,
+                orders.restaurant_id,
+                orders.extra_price AS order_extra_price,
+                orders.price AS order_price,
+                orders.profit AS order_profit,
+                orders.details AS order_details,
+                order_foods.food_id,
+                order_foods.extra_price,
+                order_foods.price,
+                order_foods.profit,
+                order_foods.details,
+                order_foods.created_at AS food_created_at,
                 foods.name_en AS food_name_en,
                 foods.name_ar AS food_name_ar,
                 tables.table_number,
                 restaurants.name AS restaurant_name
             FROM orders
+            INNER JOIN order_foods
+                ON order_foods.order_id = orders.order_id
             INNER JOIN menu_foods foods
-                ON foods.id = orders.food_id
+                ON foods.id = order_foods.food_id
             INNER JOIN tables
                 ON tables.id = orders.table_id
             INNER JOIN restaurants
                 ON restaurants.id = orders.restaurant_id
             $whereSql
-            ORDER BY orders.order_id DESC
+            ORDER BY orders.order_id DESC, order_foods.created_at ASC, order_foods.food_id ASC
         ");
 
         $stmt->execute($params);
@@ -68,16 +85,19 @@ class Order
 
     public function getById(int $id): ?array
     {
+        $rows = $this->getAll(null, null, [$id]);
+
+        return $rows[0] ?? null;
+    }
+
+    public function getParentById(int $id): ?array
+    {
         $stmt = $this->db->prepare("
             SELECT
                 orders.*,
-                foods.name_en AS food_name_en,
-                foods.name_ar AS food_name_ar,
                 tables.table_number,
                 restaurants.name AS restaurant_name
             FROM orders
-            INNER JOIN menu_foods foods
-                ON foods.id = orders.food_id
             INNER JOIN tables
                 ON tables.id = orders.table_id
             INNER JOIN restaurants
@@ -93,11 +113,15 @@ class Order
         return $order ?: null;
     }
 
+    public function getFoodsByOrderId(int $orderId): array
+    {
+        return $this->getAll(null, null, [$orderId]);
+    }
+
     public function create(array $data): int
     {
         $stmt = $this->db->prepare("
             INSERT INTO orders (
-                food_id,
                 table_id,
                 status,
                 extra_price,
@@ -109,7 +133,6 @@ class Order
                 restaurant_id
             )
             VALUES (
-                :food_id,
                 :table_id,
                 :status,
                 :extra_price,
@@ -123,11 +146,55 @@ class Order
         ");
 
         $stmt->execute([
-            ':food_id' => $data['food_id'],
             ':table_id' => $data['table_id'],
             ':status' => $data['status'] ?? 'waiting',
             ':extra_price' => $data['extra_price'] ?? 0,
             ':price' => $data['price'] ?? 0,
+            ':profit' => $data['profit'] ?? 0,
+            ':details' => $data['details'] ?? null,
+            ':session_order_key' => $data['session_order_key'],
+            ':created_at' => $data['created_at'] ?? date('Y-m-d H:i:s'),
+            ':restaurant_id' => $data['restaurant_id']
+        ]);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function createFood(array $data): int
+    {
+        $stmt = $this->db->prepare("
+            INSERT INTO order_foods (
+                order_id,
+                food_id,
+                table_id,
+                price,
+                extra_price,
+                profit,
+                details,
+                session_order_key,
+                created_at,
+                restaurant_id
+            )
+            VALUES (
+                :order_id,
+                :food_id,
+                :table_id,
+                :price,
+                :extra_price,
+                :profit,
+                :details,
+                :session_order_key,
+                :created_at,
+                :restaurant_id
+            )
+        ");
+
+        $stmt->execute([
+            ':order_id' => $data['order_id'],
+            ':food_id' => $data['food_id'],
+            ':table_id' => $data['table_id'],
+            ':price' => $data['price'] ?? 0,
+            ':extra_price' => $data['extra_price'] ?? 0,
             ':profit' => $data['profit'] ?? 0,
             ':details' => $data['details'] ?? null,
             ':session_order_key' => $data['session_order_key'],
@@ -185,7 +252,6 @@ class Order
         $stmt = $this->db->prepare("
             UPDATE orders
             SET
-                food_id = :food_id,
                 table_id = :table_id,
                 status = :status,
                 extra_price = :extra_price,
@@ -199,7 +265,6 @@ class Order
         ");
 
         return $stmt->execute([
-            ':food_id' => $data['food_id'],
             ':table_id' => $data['table_id'],
             ':status' => $data['status'],
             ':extra_price' => $data['extra_price'],
@@ -225,7 +290,7 @@ class Order
 
     public function exists(int $id): bool
     {
-        return $this->getById($id) !== null;
+        return $this->getParentById($id) !== null;
     }
 
     public function beginTransaction(): bool

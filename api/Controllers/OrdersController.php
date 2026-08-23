@@ -60,7 +60,7 @@ class OrdersController
 
     public function show(int $id): void
     {
-        $order = $this->orderModel->getById($id);
+        $order = $this->orderModel->getParentById($id);
 
         if (!$order) {
             $this->jsonResponse([
@@ -93,7 +93,9 @@ class OrdersController
 
         $this->jsonResponse([
             'success' => true,
-            'data' => $auth['is_employee'] ? $order : $this->sanitizeCustomerOrder($order)
+            'data' => $auth['is_employee']
+                ? $this->orderModel->getFoodsByOrderId($id)
+                : array_map([$this, 'sanitizeCustomerOrder'], $this->orderModel->getFoodsByOrderId($id))
         ]);
     }
 
@@ -130,6 +132,8 @@ class OrdersController
                 (int) ($createdAtTimestamp ?: time())
             );
             $orderId = $this->orderModel->create($data);
+            $data['order_id'] = $orderId;
+            $this->orderModel->createFood($data);
             $this->tableModel->assignOrder((int) $data['table_id'], $orderId);
             $this->orderModel->commit();
 
@@ -168,8 +172,10 @@ class OrdersController
         $restaurantId = (int) $data['restaurant_id'];
         $tableId = (int) $data['table_id'];
         $createdAt = $data['created_at'] ?? date('Y-m-d H:i:s');
-        $createdOrders = [];
+        $orderFoods = [];
         $total = 0.0;
+        $totalExtraPrice = 0.0;
+        $totalProfit = 0.0;
 
         try {
             $this->orderModel->beginTransaction();
@@ -222,10 +228,9 @@ class OrdersController
                 $price = ((float) ($food['price'] ?? 0) * $qty) + $extraPrice;
                 $profit = ((float) ($food['profit'] ?? 0) * $qty) + $extraProfit;
 
-                $orderData = [
+                $orderFoods[] = [
                     'food_id' => (int) $food['id'],
                     'table_id' => $tableId,
-                    'status' => 'waiting',
                     'extra_price' => $extraPrice,
                     'price' => $price,
                     'profit' => $profit,
@@ -238,16 +243,30 @@ class OrdersController
                     'restaurant_id' => $restaurantId
                 ];
 
-                $orderId = $this->orderModel->create($orderData);
-                $createdOrders[] = $this->orderModel->getById($orderId);
                 $total += $price;
+                $totalExtraPrice += $extraPrice;
+                $totalProfit += $profit;
             }
 
-            $firstOrderId = (int) ($createdOrders[0]['order_id'] ?? 0);
-            if ($firstOrderId > 0) {
-                $this->tableModel->assignOrder($tableId, $firstOrderId);
+            $orderId = $this->orderModel->create([
+                'table_id' => $tableId,
+                'status' => 'waiting',
+                'extra_price' => $totalExtraPrice,
+                'price' => $total,
+                'profit' => $totalProfit,
+                'details' => null,
+                'session_order_key' => $sessionOrderKey,
+                'created_at' => $createdAt,
+                'restaurant_id' => $restaurantId
+            ]);
+
+            foreach ($orderFoods as $orderFood) {
+                $orderFood['order_id'] = $orderId;
+                $this->orderModel->createFood($orderFood);
             }
 
+            $createdOrderFoods = $this->orderModel->getFoodsByOrderId($orderId);
+            $this->tableModel->assignOrder($tableId, $orderId);
             $this->orderModel->commit();
 
             $this->jsonResponse([
@@ -255,7 +274,8 @@ class OrdersController
                 'message' => 'Order created successfully.',
                 'data' => [
                     'session_order_key' => $sessionOrderKey,
-                    'orders' => array_map([$this, 'sanitizeCustomerOrder'], $createdOrders),
+                    'order_id' => $orderId,
+                    'orders' => array_map([$this, 'sanitizeCustomerOrder'], $createdOrderFoods),
                     'total' => $total
                 ]
             ], 201);
@@ -277,7 +297,7 @@ class OrdersController
             return;
         }
 
-        $order = $this->orderModel->getById($id);
+        $order = $this->orderModel->getParentById($id);
 
         if (!$order) {
             $this->jsonResponse([
@@ -315,7 +335,7 @@ class OrdersController
         $this->jsonResponse([
             'success' => true,
             'message' => 'Order updated successfully.',
-            'data' => $this->orderModel->getById($id)
+            'data' => $this->orderModel->getParentById($id)
         ]);
     }
 
@@ -326,7 +346,7 @@ class OrdersController
             return;
         }
 
-        $order = $this->orderModel->getById($id);
+        $order = $this->orderModel->getParentById($id);
 
         if (!$order) {
             $this->jsonResponse([
@@ -358,7 +378,7 @@ class OrdersController
     {
         $restaurantId = isset($data['restaurant_id']) ? (int) $data['restaurant_id'] : null;
 
-        if (!isset($errors['food_id'])) {
+        if (isset($data['food_id']) && !isset($errors['food_id'])) {
             $food = $this->foodModel->getById((int) $data['food_id']);
             if (!$food) {
                 $errors['food_id'] = 'Food does not exist.';
@@ -590,6 +610,7 @@ class OrdersController
 
         unset(
             $order['profit'],
+            $order['order_profit'],
             $order['session_order_key'],
             $order['restaurant_id']
         );
