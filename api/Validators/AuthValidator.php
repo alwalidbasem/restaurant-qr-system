@@ -11,6 +11,7 @@ class AuthValidator
 
         $this->validateRequiredString($data, 'username', $errors);
         $this->validateRequiredString($data, 'password', $errors);
+        $this->validateRequiredString($data, 'restaurant_code', $errors);
 
         if (isset($data['remember']) && !is_bool($data['remember'])) {
             $errors['remember'] = 'Remember must be true or false.';

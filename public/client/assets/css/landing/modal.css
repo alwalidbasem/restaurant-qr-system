@@ -12,7 +12,7 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: rgba(10, 7, 5, 0.72);
+  background: var(--overlay-modal-backdrop);
   backdrop-filter: blur(6px);
   animation: fadeIn 0.25s var(--ease);
 }
@@ -33,10 +33,10 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, var(--color-surface), var(--color-bg-alt));
-  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.82);
+  box-shadow: 0 30px 80px -30px var(--shadow-panel);
   animation: modalIn 0.35s var(--ease);
   scrollbar-width: thin;
-  scrollbar-color: var(--color-accent) rgba(244, 236, 224, 0.08);
+  scrollbar-color: var(--color-accent) var(--tint-text-08);
   overflow-anchor: none;
 }
 
@@ -45,7 +45,7 @@
 }
 
 .modal::-webkit-scrollbar-track {
-  background: rgba(244, 236, 224, 0.08);
+  background: var(--tint-text-08);
   border-radius: 999px;
 }
 
@@ -69,16 +69,16 @@
   height: 42px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(244, 236, 224, 0.18);
+  border: 1px solid var(--tint-text-18);
   border-radius: 50%;
-  background: rgba(15, 10, 7, 0.72);
+  background: var(--overlay-control-bg-dark);
   color: var(--color-text);
   transition: background var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
 }
 
 .modal__close:hover {
-  background: rgba(15, 10, 7, 0.94);
-  border-color: rgba(244, 236, 224, 0.34);
+  background: var(--overlay-control-bg-darker);
+  border-color: var(--tint-text-34);
   transform: rotate(90deg);
 }
 
@@ -88,8 +88,8 @@
   flex: 0 0 auto;
   overflow: hidden;
   background:
-    radial-gradient(circle at center, rgba(244, 236, 224, 0.06), transparent 64%),
-    rgba(15, 10, 7, 0.58);
+    radial-gradient(circle at center, var(--tint-text-06), var(--color-transparent) 64%),
+    var(--overlay-media-bg);
 }
 
 .modal__media img {
@@ -104,9 +104,9 @@
   bottom: 1rem;
   left: 1rem;
   padding: 0.38rem 0.75rem;
-  border: 1px solid rgba(224, 135, 47, 0.5);
+  border: 1px solid var(--tint-accent-50);
   border-radius: 999px;
-  background: rgba(27, 20, 15, 0.85);
+  background: var(--overlay-food-badge-bg);
   color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -145,10 +145,19 @@
 }
 
 .modal__price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
   color: var(--color-gold);
   font-family: var(--font-mono);
   font-size: 1.18rem;
   font-weight: 700;
+}
+
+.modal__old-price {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-decoration: line-through;
 }
 
 .modal__addons {
@@ -191,15 +200,15 @@
   gap: 0.85rem;
   min-height: 75px;
   padding: 0.62rem 0.75rem;
-  border: 1px solid rgba(244, 236, 224, 0.12);
+  border: 1px solid var(--tint-text-12);
   border-radius: var(--radius-sm);
-  background: rgba(244, 236, 224, 0.045);
+  background: var(--tint-text-045);
   transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .addon-row:focus-within {
-  border-color: rgba(224, 135, 47, 0.6);
-  background: rgba(244, 236, 224, 0.07);
+  border-color: var(--tint-accent-60);
+  background: var(--tint-text-07);
 }
 
 .addon-row__info {
@@ -227,6 +236,18 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+.addon-row--note {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.addon-row--note .addon-row__control {
+  width: 100%;
+}
+
+.addon-row--note .addon-row__input {
+  width: 100%;
 }
 
 .addon-checkbox {
@@ -258,22 +279,22 @@
   height: 32px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(244, 236, 224, 0.24);
+  border: 1px solid var(--tint-text-24);
   border-radius: var(--radius-sm);
-  background: rgba(15, 10, 7, 0.38);
-  color: transparent;
+  background: var(--overlay-control-bg);
+  color: var(--color-transparent);
   transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .addon-checkbox:hover .addon-checkbox__box {
-  border-color: rgba(224, 135, 47, 0.55);
+  border-color: var(--tint-accent-55);
 }
 
 .addon-checkbox input:checked + .addon-checkbox__box {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: #1b140f;
-  box-shadow: inset 0 0 0 2px rgba(27, 20, 15, 0.18);
+  color: var(--color-on-accent);
+  box-shadow: inset 0 0 0 2px var(--overlay-check-inset);
 }
 
 .addon-checkbox input:focus-visible + .addon-checkbox__box {
@@ -285,11 +306,11 @@
   width: min(260px, 48vw);
   min-height: 38px;
   padding: 0.55rem 0.75rem;
-  border: 1px solid rgba(244, 236, 224, 0.18);
+  border: 1px solid var(--tint-text-18);
   border-radius: var(--radius-sm);
-  background: rgba(15, 10, 7, 0.5);
+  background: var(--overlay-control-bg-mid);
   color: var(--color-text);
-  box-shadow: inset 0 1px 0 rgba(244, 236, 224, 0.05);
+  box-shadow: inset 0 1px 0 var(--tint-text-05);
   transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -298,9 +319,9 @@
 }
 
 .addon-row__input:focus {
-  border-color: rgba(224, 135, 47, 0.7);
-  background: rgba(15, 10, 7, 0.64);
-  box-shadow: 0 0 0 3px rgba(224, 135, 47, 0.12);
+  border-color: var(--tint-accent-70);
+  background: var(--overlay-control-bg-focus);
+  box-shadow: 0 0 0 3px var(--tint-accent-12);
   outline: none;
 }
 
@@ -311,9 +332,9 @@
   width: 120px;
   min-height: 36px;
   padding: 3px;
-  border: 1px solid rgba(244, 236, 224, 0.16);
+  border: 1px solid var(--tint-text-16);
   border-radius: 999px;
-  background: rgba(184, 54, 44, 0.2);
+  background: var(--tint-danger-20);
   isolation: isolate;
   transition: background var(--transition-fast), border-color var(--transition-fast);
 }
@@ -327,14 +348,14 @@
   width: calc(50% - 3px);
   height: calc(100% - 6px);
   border-radius: 999px;
-  background: #c95045;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  background: var(--color-danger-strong);
+  box-shadow: 0 6px 18px var(--shadow-control);
   transition: transform var(--transition-fast), background var(--transition-fast);
 }
 
 .addon-switch:has(input[value="yes"]:checked) {
-  border-color: rgba(111, 156, 106, 0.48);
-  background: rgba(111, 156, 106, 0.2);
+  border-color: var(--tint-success-48);
+  background: var(--tint-success-20);
 }
 
 .addon-switch:has(input[value="yes"]:checked)::before {
@@ -356,7 +377,7 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
   place-items: center;
   min-height: 28px;
   border-radius: 999px;
-  color: rgba(244, 236, 224, 0.64);
+  color: var(--tint-text-64);
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
@@ -364,7 +385,7 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
 }
 
 .addon-switch__input:checked + .addon-switch__option {
-  color: #10190f;
+  color: var(--color-on-success);
 }
 
 .addon-switch__input:focus-visible + .addon-switch__option {
@@ -386,9 +407,9 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
   display: grid;
   gap: 0.38rem;
   padding: 0.85rem 0.95rem;
-  border: 1px solid rgba(244, 236, 224, 0.13);
+  border: 1px solid var(--tint-text-13);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, rgba(244, 236, 224, 0.07), rgba(15, 10, 7, 0.14));
+  background: linear-gradient(180deg, var(--tint-text-07), var(--overlay-bill-bg));
 }
 
 .modal-bill__row {
@@ -409,7 +430,7 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
 .modal-bill__row--total {
   margin-top: 0.25rem;
   padding-top: 0.45rem;
-  border-top: 1px dashed rgba(244, 236, 224, 0.18);
+  border-top: 1px dashed var(--tint-text-18);
   color: var(--color-text);
   font-weight: 800;
 }
@@ -449,8 +470,8 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
 
 .modal .qty-selector {
   height: 46px;
-  background: rgba(15, 10, 7, 0.22);
-  border-color: rgba(244, 236, 224, 0.16);
+  background: var(--overlay-qty-bg);
+  border-color: var(--tint-text-16);
 }
 
 .modal .qty-btn {
@@ -460,7 +481,7 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
 
 .modal .qty-value {
   min-width: 42px;
-  background: transparent!important;
+  background: var(--color-transparent)!important;
   border: none!important;
 }
 
@@ -490,7 +511,7 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
     overflow: hidden;
     padding: 1.5rem 1.5rem 1.2rem;
     scrollbar-width: thin;
-    scrollbar-color: var(--color-accent) rgba(244, 236, 224, 0.08);
+    scrollbar-color: var(--color-accent) var(--tint-text-08);
   }
 
   .modal__title {
@@ -525,7 +546,7 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
     grid-template-columns: minmax(0, 1fr) auto;
     margin: auto -1.5rem -1.2rem;
     padding: 0.85rem 1.5rem 1.2rem;
-    background: linear-gradient(180deg, rgba(34, 26, 20, 0.78), var(--color-bg-alt) 42%);
+    background: linear-gradient(180deg, var(--overlay-footer-bg), var(--color-bg-alt) 42%);
     backdrop-filter: blur(10px);
   }
 
@@ -560,9 +581,9 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
 }
 
 .addon-meal-group {
-  border: 1px solid rgba(244, 236, 224, 0.12);
+  border: 1px solid var(--tint-text-12);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, rgba(244, 236, 224, 0.045), rgba(15, 10, 7, 0.08));
+  background: linear-gradient(180deg, var(--tint-text-045), var(--overlay-meal-group-bg));
 }
 
 .addon-meal-group__head {
@@ -571,7 +592,7 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
   gap: 0.5rem;
   margin: 0;
   padding: 0.6rem 0.85rem;
-  border-bottom: 1px solid rgba(244, 236, 224, 0.14);
+  border-bottom: 1px solid var(--tint-text-14);
   color: var(--color-text-faint);
   font-family: var(--font-mono);
   font-size: 0.78rem;
@@ -650,7 +671,7 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
     margin: auto -1.5rem -1.2rem;
     padding: 0.85rem 1.5rem 1.2rem;
     border-top: 1px solid var(--color-border);
-    background: linear-gradient(180deg, rgba(34, 26, 20, 0.78), var(--color-bg-alt) 42%);
+    background: linear-gradient(180deg, var(--overlay-footer-bg), var(--color-bg-alt) 42%);
     backdrop-filter: blur(10px);
   }
 
@@ -719,9 +740,9 @@ html[dir="rtl"] .addon-switch:has(input[value="yes"]:checked)::before {
     gap: 0.85rem;
     margin: 0;
     padding: 1rem;
-    border: 1px solid rgba(244, 236, 224, 0.12);
+    border: 1px solid var(--tint-text-12);
     border-radius: var(--radius-sm);
-    background: linear-gradient(180deg, rgba(34, 26, 20, 0.82), var(--color-bg-alt) 46%);
+    background: linear-gradient(180deg, var(--overlay-footer-strong-bg), var(--color-bg-alt) 46%);
     backdrop-filter: blur(10px);
   }
   .modal.modal--two-step.modal--step-two .modal-bill {

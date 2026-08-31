@@ -1,5 +1,8 @@
 <?php
 
+
+
+
 return [
     'brand' => [
         'logo' => [
@@ -22,8 +25,7 @@ return [
                 'logo_alt' => 'Ember and Vine logo',
             ],
             'restaurant' => [
-                'address' => '214 Kiln Street, Amman',
-                'phone' => '+962 6 555 0142',
+                'address' => '214 Kiln Street, Amman',                'phone' => '+962 6 555 0142',
                 'hours' => 'Tue-Sun, 5:00 PM - 11:00 PM',
                 'currency' => 'JOD',
             ],

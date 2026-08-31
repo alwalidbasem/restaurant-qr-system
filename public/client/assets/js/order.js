@@ -100,7 +100,7 @@ async function submitOrder() {
   }
 
   if (!MENU_ITEMS_LOADED_FROM_API) {
-    throw new Error("Menu API did not load; refusing to submit fallback menu items.");
+    throw new Error("Menu API did not load; refusing to submit order items.");
   }
 
   const placedAt = new Date().toISOString();
@@ -119,13 +119,15 @@ async function submitOrder() {
 
   const response = await fetch(context.ordersApiUrl, {
     method: "POST",
+    credentials: "omit",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
       restaurant_id: context.restaurantId,
-      table_id: context.tableId,
+      table_id: context.orderType === "takeaway" ? null : context.tableId,
+      order_type: context.orderType,
       created_at: formatSqlDateTime(placedAt),
       items: items.map(buildOrderItemPayload)
     })
@@ -141,9 +143,11 @@ async function submitOrder() {
     saveSessionOrderKey(result.data.session_order_key);
   }
   const orderNumber = result.data?.session_order_key || "";
+  const orderId = Number(result.data?.order_id || responses[0]?.order_id || 0);
 
   return {
     id: orderNumber,
+    orderId,
     sessionOrderKey: orderNumber,
     statusKey: "js_status_preparing",
     placedAt,
@@ -156,11 +160,13 @@ async function submitOrder() {
 function buildOrderItemPayload(line) {
   const item = findItem(line.id);
   const qty = normalizeQty(line.qty);
+  const addons = getPayloadAddons(line);
 
   return {
     food_id: Number(item.id),
     qty,
-    addons: (line.addons || []).map((addon) => ({
+    details: line.note || "",
+    addons: addons.map((addon) => ({
       id: Number(addon.id),
       type: addon.type,
       value: addon.value ?? null
@@ -172,13 +178,16 @@ function getOrderContext() {
   const restaurantId = Number(window.RESTAURANT_ID || 0);
   const tableId = Number(window.TABLE_ID || 0);
   const ordersApiUrl = window.ORDERS_API_URL || "";
+  const orderType = tableId > 0 ? "table" : "takeaway";
 
-  if (!restaurantId || !tableId || !ordersApiUrl) return null;
+  if (!restaurantId || !ordersApiUrl) return null;
+  if (orderType === "table" && !tableId) return null;
 
   return {
     restaurantId,
     tableId,
-    ordersApiUrl
+    ordersApiUrl,
+    orderType
   };
 }
 
@@ -219,10 +228,12 @@ function saveSubmittedOrder(submittedOrder) {
 
 function getOrderPageUrl(submittedOrder = null) {
   const orderNumber = submittedOrder?.sessionOrderKey || submittedOrder?.id || "";
+  const orderId = Number(submittedOrder?.orderId || 0);
 
   if (window.ORDER_PAGE_URL) {
     const url = new URL(window.ORDER_PAGE_URL, window.location.origin);
     if (orderNumber) url.searchParams.set("order_number", orderNumber);
+    if (orderId > 0) url.searchParams.set("order_id", String(orderId));
     return url.toString();
   }
 
@@ -241,12 +252,21 @@ function getOrderPageUrl(submittedOrder = null) {
   const url = new URL(window.location.href);
   url.pathname = `${basePath}/order`.replace(/\/{2,}/g, "/");
   if (orderNumber) url.searchParams.set("order_number", orderNumber);
+  if (orderId > 0) url.searchParams.set("order_id", String(orderId));
   return url.toString();
 }
 
-export function addToOrder(id, qty, addons = []) {
-  const lineKey = buildUniqueLineKey(id, addons);
-  state.order.push({ key: lineKey, id, qty: normalizeQty(qty), addons });
+export function addToOrder(id, qty, addons = [], notes = []) {
+  buildGroupedOrderLines(id, qty, addons, notes).forEach((line) => {
+    const existing = state.order.find((orderLine) => buildLineKey(orderLine.id, orderLine.addons, orderLine.note) === buildLineKey(line.id, line.addons, line.note));
+
+    if (existing && !line.note) {
+      existing.qty = normalizeQty(existing.qty) + normalizeQty(line.qty);
+      return;
+    }
+
+    state.order.push(line);
+  });
   saveOrderToStorage();
   renderOrderBadge();
   renderDrawer();
@@ -265,7 +285,7 @@ function removeOrderLine(key) {
 function getOrderTotal() {
   return state.order.reduce((sum, line) => {
     const item = findItem(line.id);
-    return item ? sum + (item.price + getLineAddonTotal(line)) * line.qty : sum;
+    return item ? sum + getLineTotal(item, line) : sum;
   }, 0);
 }
 
@@ -305,8 +325,9 @@ function renderDrawer() {
       const item = findItem(line.id);
       if (!item) return "";
       const lineKey = escapeHtml(line.key);
-      const lineTotal = item.price + getLineAddonTotal(line);
+      const lineTotal = getLineTotal(item, line);
       const addonsHtml = buildOrderAddonsHtml(line.addons);
+      const noteHtml = line.note ? `<div class="order-item__addons"><span>Note: ${escapeHtml(line.note)}</span></div>` : "";
       const qtyHtml = Number(line.qty) > 1
         ? `<div class="order-item__controls"><span class="order-item__qty">${i18n('js_status_qty')}: ${line.qty}</span></div>`
         : "";
@@ -315,8 +336,9 @@ function renderDrawer() {
           <img src="${item.image}" alt="${escapeHtml(item.name)}">
           <div>
             <p class="order-item__name">${escapeHtml(item.name)}</p>
-            <p class="order-item__price">${formatPrice(lineTotal)} ${i18n('js_each')}</p>
+            <p class="order-item__price">${formatPrice(lineTotal)}</p>
             ${addonsHtml}
+            ${noteHtml}
             ${qtyHtml}
           </div>
           <button class="order-item__remove" data-remove="${lineKey}" aria-label="${i18n('js_remove')}: ${escapeHtml(item.name)}">
@@ -356,11 +378,89 @@ function notifyOrderChanged() {
 function normalizeOrderLine(line) {
   const addons = Array.isArray(line.addons) ? line.addons : [];
   return {
-    key: line.key || buildLineKey(line.id, addons),
+    key: line.key || buildLineKey(line.id, addons, line.note),
     id: line.id,
     qty: normalizeQty(line.qty),
-    addons
+    addons,
+    note: line.note || ""
   };
+}
+
+function buildGroupedOrderLines(id, qty, addons = [], notes = []) {
+  const normalizedQty = normalizeQty(qty);
+  const addonGroups = groupAddonsBySelection(addons, notes);
+  const groupedQty = addonGroups.reduce((sum, group) => sum + group.qty, 0);
+
+  if (groupedQty < normalizedQty) {
+    const coveredMeals = new Set(addonGroups.flatMap((group) => group.mealIndexes || []));
+    for (let i = 0; i < normalizedQty; i += 1) {
+      const note = String(notes[i] || "").trim();
+      if (note && !coveredMeals.has(i)) addonGroups.push({ qty: 1, addons: [], note, mealIndexes: [i] });
+    }
+
+    const nextGroupedQty = addonGroups.reduce((sum, group) => sum + group.qty, 0);
+    if (nextGroupedQty < normalizedQty) {
+      addonGroups.push({ qty: normalizedQty - nextGroupedQty, addons: [], note: "" });
+    }
+  }
+
+  return addonGroups.map((group) => ({
+    key: buildUniqueLineKey(id, group.addons, group.note),
+    id,
+    qty: group.qty,
+    addons: group.addons,
+    note: group.note || ""
+  }));
+}
+
+function groupAddonsBySelection(addons = [], notes = []) {
+  const mealGroups = new Map();
+  const grouped = new Map();
+
+  addons.forEach((addon) => {
+    const visibleAddon = normalizeAddonForDisplay(addon);
+    const mealIndex = Number.isInteger(Number(addon.mealIndex)) ? Number(addon.mealIndex) : 0;
+    const mealAddons = mealGroups.get(mealIndex) || [];
+    mealAddons.push(visibleAddon);
+    mealGroups.set(mealIndex, mealAddons);
+  });
+
+  mealGroups.forEach((mealAddons) => {
+    const mealIndex = Number(mealAddons[0]?.mealIndex || 0);
+    const note = String(notes[mealIndex] || "").trim();
+    const key = `${buildAddonSelectionKey(mealAddons)}::${note}`;
+
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        qty: 0,
+        addons: mealAddons,
+        note,
+        mealIndexes: []
+      });
+    }
+
+    grouped.get(key).qty += 1;
+    grouped.get(key).mealIndexes.push(mealIndex);
+  });
+
+  return Array.from(grouped.values());
+}
+
+function normalizeAddonForDisplay(addon) {
+  return {
+    id: addon.id,
+    name: addon.name,
+    type: addon.type,
+    value: addon.value ?? null,
+    mealIndex: Number.isInteger(Number(addon.mealIndex)) ? Number(addon.mealIndex) : 0,
+    price: Number(addon.price || 0),
+    profit: Number(addon.profit || 0)
+  };
+}
+
+function getPayloadAddons(line) {
+  const addons = Array.isArray(line.addons) ? line.addons : [];
+  return addons;
 }
 
 function normalizeQty(qty) {
@@ -368,23 +468,31 @@ function normalizeQty(qty) {
   return Number.isFinite(nextQty) ? Math.max(1, nextQty) : 1;
 }
 
-function buildUniqueLineKey(id, addons = []) {
+function buildUniqueLineKey(id, addons = [], note = "") {
   const random = typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `${buildLineKey(id, addons)}::${random}`;
+  return `${buildLineKey(id, addons, note)}::${random}`;
 }
 
-function buildLineKey(id, addons = []) {
-  const addonSignature = addons
-    .map((addon) => `${addon.id}:${String(addon.value)}:${Number(addon.price || 0)}`)
+function buildLineKey(id, addons = [], note = "") {
+  return `${id}::${buildAddonSelectionKey(addons)}::${String(note || "")}`;
+}
+
+function buildAddonSelectionKey(addons = []) {
+  return addons
+    .map((addon) => `${addon.id}:${String(addon.value ?? "")}:${Number(addon.price || 0)}`)
     .sort()
     .join("|");
-  return `${id}::${addonSignature}`;
 }
 
 function getLineAddonTotal(line) {
   return (line.addons || []).reduce((sum, addon) => sum + Number(addon.price || 0), 0);
+}
+
+function getLineTotal(item, line) {
+  const qty = normalizeQty(line.qty);
+  return (Number(item.price || 0) + getLineAddonTotal(line)) * qty;
 }
 
 function getLineAddonProfit(line) {

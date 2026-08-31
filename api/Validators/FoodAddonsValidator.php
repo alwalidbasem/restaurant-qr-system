@@ -14,13 +14,32 @@ class FoodAddonsValidator
             }
         }
 
-        foreach (['food_id', 'restaurant_id'] as $field) {
+        foreach (['restaurant_id'] as $field) {
             if (!isset($data[$field])) {
                 $errors[$field] = str_replace('_', ' ', ucfirst($field)) . ' is required.';
             } elseif (
                 filter_var($data[$field], FILTER_VALIDATE_INT) === false ||
                 (int) $data[$field] <= 0
             ) {
+                $errors[$field] = str_replace('_', ' ', ucfirst($field)) . ' must be a valid positive integer.';
+            }
+        }
+
+        $foodId = $data['food_id'] ?? null;
+        $categoryId = $data['category_id'] ?? null;
+        $hasFood = $foodId !== null && $foodId !== '';
+        $hasCategory = $categoryId !== null && $categoryId !== '';
+
+        if ($hasFood === $hasCategory) {
+            $errors['addon_scope'] = 'Select either one food or one category for this addon.';
+        }
+
+        foreach (['food_id' => $foodId, 'category_id' => $categoryId] as $field => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            if (filter_var($value, FILTER_VALIDATE_INT) === false || (int) $value <= 0) {
                 $errors[$field] = str_replace('_', ' ', ucfirst($field)) . ' must be a valid positive integer.';
             }
         }

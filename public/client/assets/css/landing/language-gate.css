@@ -9,7 +9,7 @@
   display: grid;
   place-items: center;
   padding: 1.5rem;
-  background: rgba(10, 7, 5, 0.78);
+  background: var(--overlay-language-backdrop);
   backdrop-filter: blur(10px);
   animation: fadeIn 0.25s var(--ease);
 }
@@ -20,7 +20,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, var(--color-surface), var(--color-bg-alt));
-  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.82);
+  box-shadow: 0 30px 80px -30px var(--shadow-panel);
 }
 
 .language-gate__eyebrow {
@@ -50,9 +50,9 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  border: 1px solid rgba(244, 236, 224, 0.14);
+  border: 1px solid var(--tint-text-14);
   border-radius: var(--radius-sm);
-  background: rgba(244, 236, 224, 0.045);
+  background: var(--tint-text-045);
   color: var(--color-text);
   cursor: pointer;
   transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
@@ -60,8 +60,8 @@
 
 .language-card:hover,
 .language-card:focus-visible {
-  border-color: rgba(224, 135, 47, 0.65);
-  background: rgba(224, 135, 47, 0.12);
+  border-color: var(--tint-accent-65);
+  background: var(--tint-accent-12);
   outline: none;
   transform: translateY(-2px);
 }

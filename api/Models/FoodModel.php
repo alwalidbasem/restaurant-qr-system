@@ -7,6 +7,7 @@ class Food
     public function __construct(PDO $db)
     {
         $this->db = $db;
+        $this->ensureNoteColumn();
     }
 
     public function getAll(?int $restaurantId = null): array
@@ -78,6 +79,11 @@ class Food
                 image_url,
                 price,
                 profit,
+                tax_category,
+                tax_rate,
+                special_tax_amount,
+                tax_exempt,
+                note_enabled,
                 restaurant_id,
                 category_id
             )
@@ -89,6 +95,11 @@ class Food
                 :image_url,
                 :price,
                 :profit,
+                :tax_category,
+                :tax_rate,
+                :special_tax_amount,
+                :tax_exempt,
+                :note_enabled,
                 :restaurant_id,
                 :category_id
             )
@@ -102,6 +113,11 @@ class Food
             ':image_url' => $data['image_url'],
             ':price' => $data['price'],
             ':profit' => $data['profit'] ?? 0,
+            ':tax_category' => $data['tax_category'] ?? 'default',
+            ':tax_rate' => ($data['tax_rate'] ?? '') === '' ? null : $data['tax_rate'],
+            ':special_tax_amount' => $data['special_tax_amount'] ?? 0,
+            ':tax_exempt' => !empty($data['tax_exempt']) ? 1 : 0,
+            ':note_enabled' => !empty($data['note_enabled']) ? 1 : 0,
             ':restaurant_id' => $data['restaurant_id'],
             ':category_id' => $data['category_id']
         ]);
@@ -122,6 +138,11 @@ class Food
                 image_url = :image_url,
                 price = :price,
                 profit = :profit,
+                tax_category = :tax_category,
+                tax_rate = :tax_rate,
+                special_tax_amount = :special_tax_amount,
+                tax_exempt = :tax_exempt,
+                note_enabled = :note_enabled,
                 restaurant_id = :restaurant_id,
                 category_id = :category_id
 
@@ -136,6 +157,11 @@ class Food
             ':image_url' => $data['image_url'],
             ':price' => $data['price'],
             ':profit' => $data['profit'],
+            ':tax_category' => $data['tax_category'] ?? 'default',
+            ':tax_rate' => ($data['tax_rate'] ?? '') === '' ? null : $data['tax_rate'],
+            ':special_tax_amount' => $data['special_tax_amount'] ?? 0,
+            ':tax_exempt' => !empty($data['tax_exempt']) ? 1 : 0,
+            ':note_enabled' => !empty($data['note_enabled']) ? 1 : 0,
             ':restaurant_id' => $data['restaurant_id'],
             ':category_id' => $data['category_id'],
             ':id' => $id
@@ -166,7 +192,12 @@ class Food
         }
 
         $foodIds = array_map(static fn (array $food): int => (int) $food['id'], $foods);
-        $placeholders = implode(',', array_fill(0, count($foodIds), '?'));
+        $categoryIds = array_values(array_unique(array_filter(
+            array_map(static fn (array $food): ?int => isset($food['category_id']) ? (int) $food['category_id'] : null, $foods),
+            static fn (?int $id): bool => $id !== null
+        )));
+        $foodPlaceholders = implode(',', array_fill(0, count($foodIds), '?'));
+        $categoryPlaceholders = implode(',', array_fill(0, count($categoryIds), '?'));
 
         $restaurantIds = array_values(array_unique(array_filter(
             array_map(static fn (array $food): ?int => isset($food['restaurant_id']) ? (int) $food['restaurant_id'] : null, $foods),
@@ -179,23 +210,48 @@ class Food
         $stmt = $this->db->prepare("
             SELECT *
             FROM food_addons
-            WHERE food_id IN ($placeholders)
+            WHERE (food_id IN ($foodPlaceholders)" . ($categoryIds !== [] ? " OR category_id IN ($categoryPlaceholders)" : "") . ")
             $restaurantSql
             ORDER BY id ASC
         ");
 
-        $stmt->execute(array_merge($foodIds, $restaurantIds));
+        $stmt->execute(array_merge($foodIds, $categoryIds, $restaurantIds));
         $addonsByFood = [];
+        $addonsByCategory = [];
 
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $addon) {
-            $foodId = (int) $addon['food_id'];
-            $addonsByFood[$foodId][] = $addon;
+            if (!empty($addon['food_id'])) {
+                $foodId = (int) $addon['food_id'];
+                $addonsByFood[$foodId][] = $addon;
+            }
+
+            if (!empty($addon['category_id'])) {
+                $categoryId = (int) $addon['category_id'];
+                $addonsByCategory[$categoryId][] = $addon;
+            }
         }
 
         foreach ($foods as &$food) {
-            $food['addons'] = $addonsByFood[(int) $food['id']] ?? [];
+            $food['addons'] = array_values(array_merge(
+                $addonsByCategory[(int) $food['category_id']] ?? [],
+                $addonsByFood[(int) $food['id']] ?? []
+            ));
         }
 
         return $foods;
+    }
+
+    private function ensureNoteColumn(): void
+    {
+        try {
+            $this->db->exec("
+                ALTER TABLE menu_foods
+                ADD COLUMN note_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER tax_exempt
+            ");
+        } catch (PDOException $e) {
+            if (($e->errorInfo[1] ?? null) !== 1060) {
+                throw $e;
+            }
+        }
     }
 }

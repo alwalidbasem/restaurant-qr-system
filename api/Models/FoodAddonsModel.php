@@ -20,10 +20,14 @@ class FoodAddon
                 addons.*,
                 foods.name_en AS food_name_en,
                 foods.name_ar AS food_name_ar,
+                categories.name_en AS category_name_en,
+                categories.name_ar AS category_name_ar,
                 restaurants.name AS restaurant_name
             FROM food_addons addons
-            INNER JOIN menu_foods foods
+            LEFT JOIN menu_foods foods
                 ON foods.id = addons.food_id
+            LEFT JOIN menu_categories categories
+                ON categories.id = addons.category_id
             INNER JOIN restaurants
                 ON restaurants.id = addons.restaurant_id
             $restaurantSql
@@ -47,10 +51,14 @@ class FoodAddon
                 addons.*,
                 foods.name_en AS food_name_en,
                 foods.name_ar AS food_name_ar,
+                categories.name_en AS category_name_en,
+                categories.name_ar AS category_name_ar,
                 restaurants.name AS restaurant_name
             FROM food_addons addons
-            INNER JOIN menu_foods foods
+            LEFT JOIN menu_foods foods
                 ON foods.id = addons.food_id
+            LEFT JOIN menu_categories categories
+                ON categories.id = addons.category_id
             INNER JOIN restaurants
                 ON restaurants.id = addons.restaurant_id
             WHERE addons.id = :id
@@ -71,6 +79,7 @@ class FoodAddon
                 name_ar,
                 name_en,
                 food_id,
+                category_id,
                 extra_price,
                 extra_profit,
                 restaurant_id
@@ -79,6 +88,7 @@ class FoodAddon
                 :name_ar,
                 :name_en,
                 :food_id,
+                :category_id,
                 :extra_price,
                 :extra_profit,
                 :restaurant_id
@@ -88,7 +98,8 @@ class FoodAddon
         $stmt->execute([
             ':name_ar' => $data['name_ar'],
             ':name_en' => $data['name_en'],
-            ':food_id' => $data['food_id'],
+            ':food_id' => ($data['food_id'] ?? null) !== null && ($data['food_id'] ?? '') !== '' ? (int) $data['food_id'] : null,
+            ':category_id' => ($data['category_id'] ?? null) !== null && ($data['category_id'] ?? '') !== '' ? (int) $data['category_id'] : null,
             ':extra_price' => $data['extra_price'] ?? 0,
             ':extra_profit' => $data['extra_profit'] ?? 0,
             ':restaurant_id' => $data['restaurant_id']
@@ -105,6 +116,7 @@ class FoodAddon
                 name_ar = :name_ar,
                 name_en = :name_en,
                 food_id = :food_id,
+                category_id = :category_id,
                 extra_price = :extra_price,
                 extra_profit = :extra_profit,
                 restaurant_id = :restaurant_id
@@ -114,7 +126,8 @@ class FoodAddon
         return $stmt->execute([
             ':name_ar' => $data['name_ar'],
             ':name_en' => $data['name_en'],
-            ':food_id' => $data['food_id'],
+            ':food_id' => ($data['food_id'] ?? null) !== null && ($data['food_id'] ?? '') !== '' ? (int) $data['food_id'] : null,
+            ':category_id' => ($data['category_id'] ?? null) !== null && ($data['category_id'] ?? '') !== '' ? (int) $data['category_id'] : null,
             ':extra_price' => $data['extra_price'],
             ':extra_profit' => $data['extra_profit'],
             ':restaurant_id' => $data['restaurant_id'],

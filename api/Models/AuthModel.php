@@ -51,10 +51,10 @@ class AuthModel
         return $employee ?: null;
     }
 
-    public function issueApiKey(int $employeeId, bool $remember = false): array
+    public function issueApiKey(int $employeeId): array
     {
         $apiKey = bin2hex(random_bytes(self::TOKEN_BYTES));
-        $expiresAt = date('Y-m-d H:i:s', strtotime($remember ? '+30 days' : '+1 day'));
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+8 hours'));
 
         $stmt = $this->db->prepare("
             UPDATE employees

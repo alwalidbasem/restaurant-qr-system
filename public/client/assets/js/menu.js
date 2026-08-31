@@ -159,11 +159,27 @@ function buildFoodCardHtml(item) {
         <h3 class="food-card__name">${escapeHtml(item.name)}</h3>
         <p class="food-card__desc">${escapeHtml(item.description)}</p>
         <div class="food-card__footer">
-          <span class="food-card__price">${formatPrice(item.price)}</span>
+          ${buildPriceHtml(item, "food-card")}
         </div>
       </div>
     </article>
   `;
+}
+
+function buildPriceHtml(item, blockName) {
+  const original = Number(item.originalPrice || item.price || 0);
+  const price = Number(item.price || 0);
+
+  return buildPricePairHtml(price, original, blockName);
+}
+
+function buildPricePairHtml(price, original, blockName) {
+  const hasDiscount = original > price;
+
+  return `<span class="${blockName}__price${hasDiscount ? ` ${blockName}__price--discount` : ""}">` +
+    (hasDiscount ? `<span class="${blockName}__old-price">${formatPrice(original)}</span>` : "") +
+    `<span>${formatPrice(price)}</span>` +
+  `</span>`;
 }
 
 function getFilteredItems() {
@@ -194,6 +210,7 @@ function openModal(id) {
   state.activeFoodId = id;
   state.modalQty = 1;
   state.modalAddons = [];
+  state.modalNotes = [];
 
   modalImg.src = item.image;
   modalImg.alt = `${item.name}, a ${item.category.toLowerCase()} dish`;
@@ -201,7 +218,7 @@ function openModal(id) {
   modalTitle.textContent = item.name;
   modalDesc.textContent = item.description || "";
   modalDesc.hidden = !item.description;
-  modalPrice.textContent = formatPrice(item.price);
+  modalPrice.innerHTML = buildPriceHtml(item, "modal");
   setModalQtyValue(1);
   renderModalAddons(item);
   updateModalPrice(item);
@@ -228,6 +245,7 @@ function closeModal() {
   foodModal?.classList.remove(TWO_STEP, STEP_ONE, STEP_TWO, NO_ADDONS);
   state.activeFoodId = null;
   state.modalAddons = [];
+  state.modalNotes = [];
   if (!orderDrawer || !orderDrawer.classList.contains("is-open")) {
     document.body.style.overflow = "";
   }
@@ -250,7 +268,7 @@ function handleNextStep() {
   }
   const item = findItem(state.activeFoodId);
   if (!item) return;
-  foodModal.classList.toggle(NO_ADDONS, !item.addons?.length);
+  foodModal.classList.toggle(NO_ADDONS, !item.addons?.length && !item.noteEnabled);
   renderMealGroups(item);
   foodModal.classList.remove(STEP_ONE);
   foodModal.classList.add(STEP_TWO);
@@ -323,8 +341,9 @@ function addActiveItemToOrder({ includeAddons, button }) {
 
   if (includeAddons) syncModalAddons();
   const selectedAddons = includeAddons ? getSelectedAddons(item) : [];
+  const selectedNotes = includeAddons ? getSelectedNotes() : [];
 
-  addToOrder(state.activeFoodId, state.modalQty, selectedAddons);
+  addToOrder(state.activeFoodId, state.modalQty, selectedAddons, selectedNotes);
   showToast(`${item.name} ${i18n('js_added_toast')}`);
 
   const originalText = button.textContent;
@@ -340,26 +359,28 @@ function addActiveItemToOrder({ includeAddons, button }) {
 function renderModalAddons(item) {
   if (!modalAddons || !modalAddonsList) return;
   const addons = item.addons || [];
+  const hasNote = Boolean(item.noteEnabled);
 
   if (modalAddonsTitle) {
     modalAddonsTitle.textContent = i18n('js_addons_title');
   }
 
-  if (addons.length === 0) {
+  if (addons.length === 0 && !hasNote) {
     modalAddons.hidden = true;
     modalAddonsList.innerHTML = "";
     return;
   }
 
   modalAddons.hidden = false;
-  modalAddonsList.innerHTML = addons.map((addon) => buildAddonControlHtml(addon, 0)).join("");
+  modalAddonsList.innerHTML = addons.map((addon) => buildAddonControlHtml(addon, 0)).join("") + buildChefNoteHtml(0, item);
 }
 
 function renderMealGroups(item) {
   if (!modalAddons || !modalAddonsList) return;
   const addons = item.addons || [];
+  const hasNote = Boolean(item.noteEnabled);
 
-  if (addons.length === 0) {
+  if (addons.length === 0 && !hasNote) {
     modalAddons.hidden = true;
     modalAddonsList.innerHTML = "";
     return;
@@ -380,6 +401,7 @@ function renderMealGroups(item) {
         ${head}
         <div class="addon-meal-group__rows">
           ${addons.map((addon) => buildAddonControlHtml(addon, i)).join("")}
+          ${buildChefNoteHtml(i, item)}
         </div>
       </div>
     `);
@@ -387,6 +409,30 @@ function renderMealGroups(item) {
 
   modalAddonsList.innerHTML = groups.join("");
 }
+
+function buildChefNoteHtml(mealIndex, item) {
+  if (!item.noteEnabled) return "";
+  const noteTitle = i18nFallback('js_chef_note_title', 'Chef note');
+  const noteHint = i18nFallback('js_chef_note_hint', 'Sent to kitchen');
+
+  return `
+    <div class="addon-row addon-row--note">
+      <div class="addon-row__info">
+        <span class="addon-row__name">${escapeHtml(noteTitle)}</span>
+        <span class="addon-row__price">${escapeHtml(noteHint)}</span>
+      </div>
+      <div class="addon-row__control">
+        <input class="addon-row__input" type="text" data-meal="${mealIndex}" data-chef-note="1" placeholder="${i18n('js_note_placeholder')}">
+      </div>
+    </div>
+  `;
+}
+
+function i18nFallback(key, fallback) {
+  const value = i18n(key);
+  return value === key ? fallback : value;
+}
+
 function buildAddonControlHtml(addon, mealIndex = 0) {
   const priceLabel = addon.price ? `+${formatPrice(addon.price)}` : "+0.00 JOD";
   const safeId = escapeHtml(addon.id);
@@ -432,6 +478,7 @@ function syncModalAddons() {
 
   const mealCount = isTwoStep() ? state.modalQty : 1;
   state.modalAddons = [];
+  state.modalNotes = [];
 
   for (let i = 0; i < mealCount; i += 1) {
     const mealSelection = {};
@@ -450,25 +497,33 @@ function syncModalAddons() {
       }
     });
     state.modalAddons.push(mealSelection);
+    state.modalNotes.push((modalAddonsList.querySelector(`[data-meal="${i}"][data-chef-note="1"]`)?.value || "").trim());
   }
 
   updateModalPrice(item);
 }
+
+function getSelectedNotes() {
+  return Array.isArray(state.modalNotes) ? state.modalNotes : [];
+}
+
 function getSelectedAddons(item) {
   if (!item?.addons) return [];
 
   const selected = [];
-  (state.modalAddons || []).forEach((mealSelection) => {
+  (state.modalAddons || []).forEach((mealSelection, mealIndex) => {
     item.addons.forEach((addon) => {
       const value = mealSelection?.[addon.id];
       const isSelected = addon.type === "input" ? Boolean(value) : Boolean(value);
       if (!isSelected) return;
       selected.push({
         id: addon.id,
+        mealIndex,
         name: addon.name,
         type: addon.type,
         value,
         price: addon.type === "input" ? 0 : Number(addon.price || 0),
+        originalPrice: addon.type === "input" ? 0 : Number(addon.originalPrice || addon.price || 0),
         profit: addon.type === "input" ? 0 : Number(addon.profit || 0)
       });
     });
@@ -482,15 +537,13 @@ function getModalAddonTotal(item) {
 
 function updateModalPrice(item) {
   const addonTotal = getModalAddonTotal(item);
+  const originalAddonTotal = getSelectedAddons(item).reduce((sum, addon) => sum + Number(addon.originalPrice || addon.price || 0), 0);
+  const discountedTotal = item.price * state.modalQty + addonTotal;
+  const originalTotal = Number(item.originalPrice || item.price || 0) * state.modalQty + originalAddonTotal;
   if (modalBillExtras) modalBillExtras.textContent = formatPrice(addonTotal);
   if (modalBillQty) modalBillQty.textContent = state.modalQty;
 
-  if (isTwoStep()) {
-    // Extras are grouped per meal, so extras already scale with quantity.
-    modalPrice.textContent = formatPrice(item.price * state.modalQty + addonTotal);
-  } else {
-    modalPrice.textContent = formatPrice((item.price + addonTotal) * state.modalQty);
-  }
+  modalPrice.innerHTML = buildPricePairHtml(discountedTotal, originalTotal, "modal");
 }
 
 function updateActiveModalBill() {

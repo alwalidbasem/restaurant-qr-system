@@ -74,6 +74,7 @@
   "status_back_menu": "Back to menu",
   "status_eyebrow": "Order Status",
   "status_title_prefix": "Your order is",
+  "status_done_title": "Your order is done!",
   "status_loading": "Loading",
   "status_copy": "Track the latest order placed from this device.",
   "status_total_aria": "Order total",

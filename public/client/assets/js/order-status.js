@@ -16,6 +16,7 @@ export async function initOrderStatus() {
   await loadMenuItems();
   const order = await getVisibleOrder();
   renderOrderStatus(order);
+  startTableStatusPolling();
 }
 
 async function getVisibleOrder() {
@@ -40,8 +41,10 @@ async function getVisibleOrder() {
 async function getOrderFromApi() {
   const params = new URLSearchParams(window.location.search);
   const orderNumber = (params.get("order_number") || params.get("session_order_key") || "").trim();
+  const savedOrder = readJson(LAST_ORDER_STORAGE_KEY);
+  const orderId = Number(params.get("order_id") || savedOrder?.orderId || 0);
 
-  if (!orderNumber || !window.ORDERS_API_URL) return null;
+  if (!orderNumber || !orderId || !window.ORDERS_API_URL) return null;
 
   try {
     const sessionOrderKey = getSessionOrderKey();
@@ -49,8 +52,14 @@ async function getOrderFromApi() {
 
     const url = new URL(window.ORDERS_API_URL, window.location.origin);
     url.searchParams.set("session_order_key", orderNumber);
+    url.searchParams.set("order_id", String(orderId));
+    if (window.RESTAURANT_CODE) {
+      url.searchParams.set("restaurant_code", window.RESTAURANT_CODE);
+      url.searchParams.delete("restaurant_id");
+    }
 
     const response = await fetch(url.toString(), {
+      credentials: "omit",
       headers: {
         Accept: "application/json",
         "SESSION-ORDER-KEY": sessionOrderKey
@@ -83,24 +92,35 @@ function getSessionOrderKey() {
 }
 
 function normalizeApiOrder(rows, orderNumber) {
-  const items = rows.map((row) => {
-    const details = parseDetails(row.details);
+  const grouped = new Map();
 
-    return {
-      id: String(row.food_id),
-      qty: Number(details.qty || 1),
-      addons: Array.isArray(details.addons)
-        ? details.addons.map((addon) => ({
-            id: String(addon.id),
-            name: getLocalizedAddonName(addon),
-            type: addon.type || "checkbox",
-            value: addon.value,
-            price: Number(addon.price || 0),
-            profit: Number(addon.profit || 0)
-          }))
-        : []
-    };
+  rows.forEach((row) => {
+    const addons = normalizeApiAddons(row);
+    const key = [
+      row.food_id,
+      addons.map((addon) => addon.id).sort().join(","),
+      row.details || ""
+    ].join("::");
+    const qty = Number(row.qty || 1);
+
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        id: String(row.food_id),
+        name: getLocalizedFoodName(row),
+        image: row.image_url || "",
+        price: Number(row.food_price || row.price || 0),
+        qty,
+        addons,
+        note: row.details || ""
+      });
+      return;
+    }
+
+    const item = grouped.get(key);
+    item.qty += qty;
   });
+
+  const items = Array.from(grouped.values());
 
   return {
     id: orderNumber,
@@ -111,20 +131,53 @@ function normalizeApiOrder(rows, orderNumber) {
   };
 }
 
-function parseDetails(details) {
-  if (!details) return {};
-
-  try {
-    const parsed = JSON.parse(details);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch (err) {
-    return {};
+function normalizeApiAddons(row) {
+  if (Array.isArray(row.addons)) {
+    return row.addons.map((addon) => ({
+      id: String(addon.id),
+      name: getLocalizedAddonName(addon),
+      type: addon.type || "checkbox",
+      value: addon.value ?? null,
+      price: Number(addon.extra_price || addon.price || 0),
+      profit: Number(addon.extra_profit || addon.profit || 0)
+    }));
   }
+
+  const addonIds = normalizeApiAddonIds(row.addon_id);
+  if (addonIds.length === 0) return [];
+
+  return addonIds.map((addonId, index) => ({
+    id: String(addonId),
+    name: index === 0 ? getLocalizedAddonName(row) : `#${addonId}`,
+    type: "checkbox",
+    value: null,
+    price: index === 0 ? Number(row.addon_extra_price || 0) : 0,
+    profit: index === 0 ? Number(row.addon_extra_profit || 0) : 0
+  }));
 }
 
-function getLocalizedAddonName(addon) {
+function normalizeApiAddonIds(value) {
+  if (!value) return [];
+
+  const values = Array.isArray(value) ? value : [value];
+
+  return values
+    .map((addonId) => Number(addonId))
+    .filter((addonId) => Number.isInteger(addonId) && addonId > 0);
+}
+
+function getLocalizedFoodName(row) {
   const lang = document.documentElement.lang === "ar" ? "ar" : "en";
-  return addon[`name_${lang}`] || addon[`name_${lang === "ar" ? "en" : "ar"}`] || "";
+  return row[`food_name_${lang}`] || row[`food_name_${lang === "ar" ? "en" : "ar"}`] || "";
+}
+
+function getLocalizedAddonName(row) {
+  const lang = document.documentElement.lang === "ar" ? "ar" : "en";
+  return row[`name_${lang}`]
+    || row[`addon_name_${lang}`]
+    || row[`name_${lang === "ar" ? "en" : "ar"}`]
+    || row[`addon_name_${lang === "ar" ? "en" : "ar"}`]
+    || "";
 }
 
 function readJson(key) {
@@ -138,6 +191,7 @@ function readJson(key) {
 }
 
 function renderOrderStatus(order) {
+  const titleEl = document.getElementById("orderStatusTitle");
   const statusEl = document.getElementById("orderStatusValue");
   const totalEl = document.getElementById("orderStatusTotal");
   const idEl = document.getElementById("orderStatusId");
@@ -145,6 +199,9 @@ function renderOrderStatus(order) {
   const listEl = document.getElementById("orderStatusItems");
   const emptyEl = document.getElementById("orderStatusEmpty");
 
+  if (titleEl) {
+    titleEl.innerHTML = `${escapeHtml(i18n("status_title_prefix"))} <span id="orderStatusValue">${escapeHtml(getOrderStatusText(order))}</span>`;
+  }
   if (statusEl) statusEl.textContent = getOrderStatusText(order);
   if (totalEl) totalEl.textContent = formatPrice(order.total || getItemsTotal(order.items));
   if (idEl) idEl.textContent = order.id || i18n("js_status_draft");
@@ -164,29 +221,36 @@ function renderOrderStatus(order) {
 
 function buildItemHtml(line) {
   const item = findItem(line.id);
-  if (!item) return "";
+  if (!item && !line.name) return "";
 
   const qty = Number(line.qty || 1);
   const addons = line.addons || [];
-  const lineTotal = (item.price + getLineAddonTotal(line)) * qty;
+  const unitPrice = Number(item?.price || line.price || 0);
+  const name = line.name || item.name;
+  const image = item?.image || line.image || "";
+  const lineTotal = (unitPrice + getLineAddonTotal(line)) * qty;
   const addonsHtml = addons.length
     ? `<div class="order-status-item__addons">${addons.map(buildAddonHtml).join("")}</div>`
     : "";
+  const noteHtml = line.note
+    ? `<div class="order-status-item__addons"><span>Note: ${escapeHtml(line.note)}</span></div>`
+    : "";
   const itemMeta = i18n("js_status_item_meta", {
     qty,
-    price: formatPrice(item.price),
+    price: formatPrice(unitPrice),
     each: i18n("js_each")
   });
 
   return `
     <article class="order-status-item">
-      <img src="${item.image}" alt="${escapeHtml(item.name)}">
+      ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}">` : ""}
       <div class="order-status-item__body">
         <div>
-          <p class="order-status-item__name">${escapeHtml(item.name)}</p>
+          <p class="order-status-item__name">${escapeHtml(name)}</p>
           <p class="order-status-item__meta">${escapeHtml(itemMeta)}</p>
         </div>
         ${addonsHtml}
+        ${noteHtml}
       </div>
       <strong class="order-status-item__price">${formatPrice(lineTotal)}</strong>
     </article>
@@ -208,11 +272,99 @@ function getOrderStatusText(order) {
   return order.status || i18n("js_status_no_order");
 }
 
+function startTableStatusPolling() {
+  if (!window.TABLES_API_URL) return;
+
+  let stopped = false;
+  const check = async () => {
+    if (stopped) return;
+
+    try {
+      const table = await fetchCurrentTable();
+      if (!table) return;
+
+      const status = normalizeTableStatus(table.table_status);
+      if (status === "free" || hasMissingWaitingOrder(status, table)) {
+        stopped = true;
+        window.location.replace(getLandingPageUrl(table));
+        return;
+      }
+
+      if (status === "order_done") {
+        renderOrderDoneTitle();
+      }
+    } catch (err) {
+      console.warn("Could not check table status:", err);
+    }
+  };
+
+  check();
+  const intervalId = window.setInterval(check, 5000);
+  window.addEventListener("pagehide", () => {
+    stopped = true;
+    window.clearInterval(intervalId);
+  }, { once: true });
+}
+
+async function fetchCurrentTable() {
+  const response = await fetch(window.TABLES_API_URL, {
+    credentials: "omit",
+    headers: { Accept: "application/json" }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Tables API returned ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return payload?.success ? payload.data : null;
+}
+
+function normalizeTableStatus(status) {
+  return String(status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function hasMissingWaitingOrder(status, table) {
+  return status === "waiting_order" && Number(table?.order_id || 0) <= 0;
+}
+
+function renderOrderDoneTitle() {
+  const titleEl = document.getElementById("orderStatusTitle");
+  const statusEl = document.getElementById("orderStatusValue");
+  const doneTitle = i18n("status_done_title");
+
+  if (titleEl) titleEl.textContent = doneTitle;
+  if (statusEl) statusEl.textContent = doneTitle;
+}
+
+function getLandingPageUrl(table = null) {
+  const url = new URL(window.location.href);
+  const restaurantCode = String(window.RESTAURANT_CODE || "").trim();
+  const tableNumber = Number(table?.table_number || window.TABLE_NUMBER || 0);
+  const path = url.pathname.replace(/\/+$/, "");
+  const publicClientIndex = path.indexOf("/public/client");
+
+  if (publicClientIndex !== -1) {
+    url.pathname = path.slice(0, publicClientIndex) || "/";
+  } else if (path.endsWith("/order")) {
+    url.pathname = path.slice(0, -6) || "/";
+  } else {
+    url.pathname = path || "/";
+  }
+
+  url.search = "";
+  if (restaurantCode) url.searchParams.set("restaurant_code", restaurantCode);
+  if (tableNumber > 0) url.searchParams.set("t_n", String(tableNumber));
+  if (document.documentElement.lang) url.searchParams.set("language", document.documentElement.lang);
+
+  return url.toString();
+}
+
 function getItemsTotal(items) {
   return items.reduce((sum, line) => {
     const item = findItem(line.id);
     if (!item) return sum;
-    return sum + (item.price + getLineAddonTotal(line)) * Number(line.qty || 1);
+    return sum + (Number(item.price || 0) + getLineAddonTotal(line)) * Number(line.qty || 1);
   }, 0);
 }
 

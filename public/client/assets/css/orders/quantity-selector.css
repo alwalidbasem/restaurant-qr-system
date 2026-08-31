@@ -14,7 +14,7 @@
   color: var(--color-text);
   transition: background var(--transition-fast);
 }
-.qty-btn:hover { background: rgba(244, 236, 224, 0.08); }
+.qty-btn:hover { background: var(--tint-text-08); }
 .qty-value {
   min-width: 36px;
   text-align: center;

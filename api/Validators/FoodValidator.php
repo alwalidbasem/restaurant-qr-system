@@ -30,6 +30,22 @@ class FoodValidator
             $errors['profit'] = 'Profit must be a valid non-negative number.';
         }
 
+        if (isset($data['tax_category']) && !in_array($data['tax_category'], ['default', 'S', 'Z', 'O'], true)) {
+            $errors['tax_category'] = 'Tax category must be default, S, Z, or O.';
+        }
+
+        if (isset($data['tax_rate']) && $data['tax_rate'] !== '' && (!is_numeric($data['tax_rate']) || (float) $data['tax_rate'] < 0 || (float) $data['tax_rate'] > 100)) {
+            $errors['tax_rate'] = 'Tax rate must be between 0 and 100.';
+        }
+
+        if (isset($data['special_tax_amount']) && (!is_numeric($data['special_tax_amount']) || (float) $data['special_tax_amount'] < 0)) {
+            $errors['special_tax_amount'] = 'Special tax amount must be a valid non-negative number.';
+        }
+
+        if (isset($data['note_enabled']) && !is_bool($data['note_enabled']) && !in_array((string) $data['note_enabled'], ['0', '1'], true)) {
+            $errors['note_enabled'] = 'Note enabled must be 0 or 1.';
+        }
+
         foreach (['category_id', 'restaurant_id'] as $field) {
             if (!isset($data[$field])) {
                 $errors[$field] = str_replace('_', ' ', ucfirst($field)) . ' is required.';

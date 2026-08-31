@@ -23,7 +23,7 @@ html {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #eda255, var(--color-accent-dark));
+  background: linear-gradient(180deg, var(--color-scrollbar-accent), var(--color-accent-dark));
 }
 
 @media (prefers-reduced-motion: reduce) {

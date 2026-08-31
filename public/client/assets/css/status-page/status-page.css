@@ -44,9 +44,9 @@ html[dir="rtl"] .order-status-back:hover {
 .order-status-total,
 .order-status-meta,
 .order-status-list-section__inner {
-  border: 1px solid rgba(244, 236, 224, 0.12);
-  background: rgba(42, 32, 25, 0.84);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--tint-text-12);
+  background: var(--overlay-panel-bg);
+  box-shadow: 0 24px 70px var(--shadow-panel-soft);
 }
 
 .order-status-summary__main {
@@ -113,12 +113,12 @@ html[dir="rtl"] .order-status-back:hover {
 }
 
 .order-status-meta div + div {
-  border-left: 1px solid rgba(244, 236, 224, 0.12);
+  border-left: 1px solid var(--tint-text-12);
 }
 
 html[dir="rtl"] .order-status-meta div + div {
   border-left: 0;
-  border-right: 1px solid rgba(244, 236, 224, 0.12);
+  border-right: 1px solid var(--tint-text-12);
 }
 
 .order-status-meta strong {
@@ -161,8 +161,8 @@ html[dir="rtl"] .order-status-meta div + div {
   align-items: center;
   padding: 0.85rem;
   border-radius: var(--radius-sm);
-  background: rgba(244, 236, 224, 0.055);
-  border: 1px solid rgba(244, 236, 224, 0.09);
+  background: var(--tint-text-055);
+  border: 1px solid var(--tint-text-09);
 }
 
 .order-status-item img {
@@ -185,8 +185,8 @@ html[dir="rtl"] .order-status-meta div + div {
 
 .order-status-item__addons span {
   border-radius: 999px;
-  background: rgba(224, 135, 47, 0.1);
-  border: 1px solid rgba(224, 135, 47, 0.18);
+  background: var(--tint-accent-10);
+  border: 1px solid var(--tint-accent-18);
   padding: 0.24rem 0.55rem;
 }
 
@@ -225,16 +225,16 @@ html[dir="rtl"] .order-status-meta div + div {
   padding: 1.25rem;
   color: var(--color-text);
   background:
-    linear-gradient(rgba(20, 15, 12, 0.7), rgba(20, 15, 12, 0.92)),
+    var(--overlay-status-cover),
     url("https://images.unsplash.com/photo-1559329007-40df8a9345d8?auto=format&fit=crop&w=1800&q=80") center / cover;
 }
 
 .table-status-panel {
   width: min(35rem, 100%);
-  border: 1px solid rgba(244, 236, 224, 0.14);
+  border: 1px solid var(--tint-text-14);
   border-radius: var(--radius-md);
-  background: rgba(42, 32, 25, 0.9);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+  background: var(--overlay-panel-strong-bg);
+  box-shadow: 0 24px 80px var(--shadow-panel-strong);
   padding: clamp(1.5rem, 5vw, 2.4rem);
   text-align: center;
 }
@@ -267,15 +267,15 @@ html[dir="rtl"] .order-status-meta div + div {
   margin: 0 auto 1.1rem;
   border-radius: 50%;
   color: var(--color-accent);
-  background: rgba(224, 135, 47, 0.13);
-  border: 1px solid rgba(224, 135, 47, 0.28);
+  background: var(--tint-accent-13);
+  border: 1px solid var(--tint-accent-28);
   font-size: 1.8rem;
 }
 
 .table-status-page--busy .table-status-panel__icon {
   color: var(--color-gold);
-  background: rgba(230, 184, 105, 0.12);
-  border-color: rgba(230, 184, 105, 0.28);
+  background: var(--tint-gold-12);
+  border-color: var(--tint-gold-28);
 }
 
 .table-status-panel h1 {
@@ -305,8 +305,8 @@ html[dir="rtl"] .order-status-meta div + div {
   border-radius: var(--radius-sm);
   padding: 0.9rem;
   text-align: start;
-  background: rgba(244, 236, 224, 0.055);
-  border: 1px solid rgba(244, 236, 224, 0.09);
+  background: var(--tint-text-055);
+  border: 1px solid var(--tint-text-09);
 }
 
 .table-status-details dt {
@@ -339,7 +339,7 @@ html[dir="rtl"] .order-status-meta div + div {
   html[dir="rtl"] .order-status-meta div + div {
     border-left: 0;
     border-right: 0;
-    border-top: 1px solid rgba(244, 236, 224, 0.12);
+    border-top: 1px solid var(--tint-text-12);
   }
 
   .order-status-item {

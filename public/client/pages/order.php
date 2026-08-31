@@ -5,7 +5,7 @@
       <div class="order-status-summary">
         <div class="order-status-summary__main">
           <p class="section-eyebrow"><?= t('status_eyebrow'); ?></p>
-          <h1><?= t('status_title_prefix'); ?> <span id="orderStatusValue"><?= t('status_loading'); ?></span></h1>
+          <h1 id="orderStatusTitle"><?= t('status_title_prefix'); ?> <span id="orderStatusValue"><?= t('status_loading'); ?></span></h1>
           <p class="order-status-summary__copy"><?= t('status_copy'); ?></p>
         </div>
 

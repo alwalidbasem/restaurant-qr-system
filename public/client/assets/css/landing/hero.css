@@ -26,8 +26,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(15, 10, 7, 0.55) 0%, rgba(15, 10, 7, 0.65) 45%, rgba(15, 10, 7, 0.95) 100%),
-    linear-gradient(90deg, rgba(15, 10, 7, 0.75) 0%, rgba(15, 10, 7, 0.25) 55%);
+    var(--overlay-hero-vertical),
+    var(--overlay-hero-horizontal);
 }
 
 .hero__content {
@@ -54,8 +54,8 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-muted);
-  background: rgba(244, 236, 224, 0.08);
-  border: 1px solid rgba(244, 236, 224, 0.2);
+  background: var(--tint-text-08);
+  border: 1px solid var(--tint-text-20);
   padding: 0.5rem 1rem;
   border-radius: 999px;
   margin-bottom: 1.75rem;
@@ -64,7 +64,7 @@
 .open-dot {
   font-size: 0.55rem;
   color: var(--color-success);
-  filter: drop-shadow(0 0 6px rgba(111, 156, 106, 0.9));
+  filter: drop-shadow(0 0 6px var(--glow-success));
   animation: pulse 2.2s ease-in-out infinite;
 }
 @keyframes pulse {
@@ -108,7 +108,7 @@
   transform: translateX(-50%);
   width: 26px;
   height: 42px;
-  border: 2px solid rgba(244, 236, 224, 0.4);
+  border: 2px solid var(--tint-text-40);
   border-radius: 999px;
 }
 .hero__scroll-cue span {

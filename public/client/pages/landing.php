@@ -31,7 +31,7 @@
 <section class="hero" id="top">
   <div class="hero__media" id="heroMedia">
     <img
-      src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80"
+      src="<?= htmlspecialchars((string) restaurant_website_setting('hero_image_url', 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80'), ENT_QUOTES, 'UTF-8'); ?>"
       alt="<?= t('hero_img_alt'); ?>"
       class="hero__img"
       id="heroImg">
@@ -39,9 +39,9 @@
   </div>
 
   <div class="hero__content">
-    <p class="hero__eyebrow"><i class="fa-solid fa-circle open-dot" aria-hidden="true"></i> <?= t('hero_eyebrow'); ?></p>
-    <h1 class="hero__title"><?= t('hero_title_1'); ?><br><span class="hero__title-accent"><?= t('hero_title_2'); ?></span></h1>
-    <p class="hero__desc"><?= t('hero_desc'); ?></p>
+    <p class="hero__eyebrow"><i class="fa-solid fa-circle open-dot" aria-hidden="true"></i> <?= restaurant_website_html('hero_eyebrow', t('hero_eyebrow')); ?></p>
+    <h1 class="hero__title"><?= restaurant_website_html('hero_title', t('hero_title_1')); ?><br><span class="hero__title-accent"><?= restaurant_website_html('hero_accent', t('hero_title_2')); ?></span></h1>
+    <div class="hero__desc"><?= restaurant_website_html('hero_description', t('hero_desc')); ?></div>
     <div class="hero__actions">
       <a href="#menu" class="btn btn--primary" id="exploreMenuBtn">
         <?= t('hero_explore'); ?> <i class="fa-solid fa-arrow-down-long" aria-hidden="true"></i>
@@ -59,8 +59,8 @@
 
     <div class="menu-header">
       <p class="section-eyebrow"><?= t('menu_eyebrow'); ?></p>
-      <h2 class="section-title"><?= t('menu_title'); ?></h2>
-      <p class="section-subtitle"><?= t('menu_subtitle'); ?></p>
+      <h2 class="section-title"><?= restaurant_website_html('menu_title', t('menu_title')); ?></h2>
+      <div class="section-subtitle"><?= restaurant_website_html('menu_subtitle', t('menu_subtitle')); ?></div>
     </div>
 
     <div class="menu-controls">

@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(10, 7, 5, 0.6);
+  background: var(--overlay-drawer-backdrop);
   backdrop-filter: blur(4px);
   animation: fadeIn 0.25s var(--ease);
 }
@@ -19,7 +19,7 @@
   flex-direction: column;
   transform: translateX(100%);
   transition: transform 0.4s var(--ease);
-  box-shadow: -20px 0 60px -20px rgba(0,0,0,0.6);
+  box-shadow: -20px 0 60px -20px var(--shadow-card-hover);
 }
 .order-drawer.is-open { transform: translateX(0); }
 
@@ -45,7 +45,7 @@
   border-radius: 50%;
   transition: background var(--transition-fast);
 }
-.drawer-close:hover { background: rgba(244, 236, 224, 0.08); }
+.drawer-close:hover { background: var(--tint-text-08); }
 
 .order-drawer__body {
   flex: 1;

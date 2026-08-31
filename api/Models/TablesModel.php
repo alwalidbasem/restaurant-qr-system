@@ -177,7 +177,8 @@ class Table
     // Check if table number already exists
     public function tableNumberExists(
         int $tableNumber,
-        ?int $ignoreId = null
+        ?int $ignoreId = null,
+        ?int $restaurantId = null
     ): bool {
 
         $sql = "
@@ -189,6 +190,11 @@ class Table
         $params = [
             ':table_number' => $tableNumber
         ];
+
+        if ($restaurantId !== null) {
+            $sql .= " AND restaurant_id = :restaurant_id";
+            $params[':restaurant_id'] = $restaurantId;
+        }
 
         if ($ignoreId !== null) {
             $sql .= " AND id != :ignore_id";

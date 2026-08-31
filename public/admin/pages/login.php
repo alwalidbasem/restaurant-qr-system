@@ -1,7 +1,3 @@
-<?php
-// Login page (frontend only). No backend authentication is wired up yet.
-?>
-
 <div class="auth-card">
   <div class="auth-brand">
     <div class="brand-mark"><i class="bi bi-egg-fried"></i></div>
@@ -17,12 +13,20 @@
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
 
-  <form id="loginForm" novalidate>
+  <div id="loginForm">
     <div class="mb-3 auth-field">
-      <label class="form-label" for="loginUsername">Username or Email</label>
+      <label class="form-label" for="loginUsername">Username</label>
       <div class="input-group">
         <span class="input-group-text bg-white"><i class="bi bi-person"></i></span>
         <input type="text" class="form-control" id="loginUsername" name="username" placeholder="admin@savora.com" autocomplete="username" required>
+      </div>
+    </div>
+
+    <div class="mb-3 auth-field">
+      <label class="form-label" for="loginRestaurantCode">Restaurant Code</label>
+      <div class="input-group">
+        <span class="input-group-text bg-white"><i class="bi bi-building"></i></span>
+        <input type="text" class="form-control" id="loginRestaurantCode" name="restaurant_code" placeholder="Restaurant code" autocomplete="organization" required>
       </div>
     </div>
 
@@ -45,56 +49,11 @@
       <a href="#" class="text-decoration-none" style="color:var(--primary);">Forgot password?</a>
     </div>
 
-    <button class="btn btn-primary auth-submit" type="submit" id="loginSubmit">
+    <button class="btn btn-primary auth-submit" id="loginSubmit">
       <span class="spinner-border spinner-border-sm d-none" id="loginSpinner"></span>
       <span id="loginSubmitText">Sign In</span>
     </button>
-  </form>
+  </div>
 
   <p class="auth-footer">&copy; 2026 Savora Restaurant</p>
 </div>
-
-<script>
-(function () {
-  var form = document.getElementById('loginForm');
-  var submitBtn = document.getElementById('loginSubmit');
-  var spinner = document.getElementById('loginSpinner');
-  var submitText = document.getElementById('loginSubmitText');
-  var alertBox = document.getElementById('authAlert');
-  var alertText = document.getElementById('authAlertText');
-  var toggleBtn = document.getElementById('togglePassword');
-  var passwordInput = document.getElementById('loginPassword');
-  var toggleIcon = document.getElementById('togglePasswordIcon');
-
-  // Show / hide password
-  toggleBtn.addEventListener('click', function () {
-    var isPassword = passwordInput.type === 'password';
-    passwordInput.type = isPassword ? 'text' : 'password';
-    toggleIcon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
-  });
-
-  // Frontend-only submit: simulate a short delay, then show an info alert.
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!form.checkValidity()) {
-      form.classList.add('was-validated');
-      return;
-    }
-
-    submitBtn.disabled = true;
-    spinner.classList.remove('d-none');
-    submitText.textContent = 'Signing in...';
-
-    window.setTimeout(function () {
-      submitBtn.disabled = false;
-      spinner.classList.add('d-none');
-      submitText.textContent = 'Sign In';
-
-      alertText.textContent = 'Frontend preview only — the login endpoint is not wired up yet.';
-      alertBox.classList.add('show');
-    }, 900);
-  });
-})();
-</script>

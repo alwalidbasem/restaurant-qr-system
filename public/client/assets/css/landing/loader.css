@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 42%, rgba(224, 135, 47, 0.18), transparent 28rem),
+    radial-gradient(circle at 50% 42%, var(--tint-accent-18), var(--color-transparent) 28rem),
     var(--color-bg);
   transition: opacity 0.5s var(--ease), visibility 0.5s var(--ease);
 }
@@ -29,12 +29,8 @@
 .site-loader__mark {
   display: inline-grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: rgba(244, 236, 224, 0.08);
-  box-shadow: 0 0 36px rgba(224, 135, 47, 0.36);
+  width: 7em!important;
+  height: 7em!important;
 }
 
 .site-loader__logo-img {
@@ -58,7 +54,7 @@
   position: absolute;
   width: 160px;
   height: 160px;
-  border: 1px solid rgba(244, 236, 224, 0.14);
+  border: 1px solid var(--tint-text-14);
   border-top-color: var(--color-accent);
   border-radius: 50%;
   animation: loaderRing 1.1s linear infinite;

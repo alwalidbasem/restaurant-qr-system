@@ -26,6 +26,8 @@ $auth_layout   = !empty($auth_layout);
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <?php if (isset($template['header']['body'])) echo $template['header']['body']; ?>
 </head>
@@ -40,10 +42,9 @@ $auth_layout   = !empty($auth_layout);
       <?= $template['body'] ?? ''; ?>
     </div>
   <?php endif; ?>
-
-  <?php if (isset($template['footer'])) echo $template['footer']; ?>
-
-  <!-- Bootstrap JS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+    <footer>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+      <?php if (isset($template['footer'])) echo $template['footer']; ?>
+    </footer>
 </body>
 </html>

@@ -1,10 +1,18 @@
 <?php
-// Tables management page (frontend only).
-// Interactive floor plan: drag & drop tables, add new tables, manage status & price.
-// Layout is persisted to localStorage since there is no backend yet.
+$canCreateTables = admin_can($admin_context, 'tables.create');
+$canUpdateTables = admin_can($admin_context, 'tables.update');
+$canDeleteTables = admin_can($admin_context, 'tables.delete');
+$restaurantId = (int) ($admin_context['active_restaurant_id'] ?? 0);
 ?>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
   window.TABLE_ICON_URL = <?= json_encode(app_base_url() . '/storage/icons/restaurant-table-icon.svg', JSON_UNESCAPED_SLASHES); ?>;
+  window.TABLES_PAGE = <?= json_encode([
+      'restaurant_id' => $restaurantId,
+      'can_create' => $canCreateTables,
+      'can_update' => $canUpdateTables,
+      'can_delete' => $canDeleteTables,
+  ], JSON_UNESCAPED_SLASHES); ?>;
 </script>
 
 <div class="card mb-3">
@@ -12,15 +20,23 @@
     <div class="tables-toolbar">
       <div>
         <div class="section-title mb-0">Tables</div>
-        <small class="text-secondary">Drag to move &middot; right-click for status / remove &middot; then save.</small>
+        <small class="text-secondary">Select a floor, arrange tables, then save and print QR codes.</small>
       </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-outline-primary" id="newTableBtn" type="button">
-          <i class="bi bi-plus-lg"></i> New Table
-        </button>
-        <button class="btn btn-primary" id="savePlanBtn" type="button">
-          <i class="bi bi-check-lg"></i> Save
-        </button>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <select class="form-select form-select-sm floor-select" id="floorSelect" aria-label="Floor"></select>
+        <?php if ($canCreateTables): ?>
+          <button class="btn btn-outline-secondary btn-sm" id="addFloorBtn" type="button">
+            <i class="bi bi-layers"></i> Floor
+          </button>
+          <button class="btn btn-outline-primary btn-sm" id="newTableBtn" type="button">
+            <i class="bi bi-plus-lg"></i> Table
+          </button>
+        <?php endif; ?>
+        <?php if ($canUpdateTables || $canCreateTables): ?>
+          <button class="btn btn-primary btn-sm" id="savePlanBtn" type="button">
+            <i class="bi bi-check-lg"></i> Save
+          </button>
+        <?php endif; ?>
       </div>
     </div>
   </div>
@@ -29,25 +45,69 @@
 <div class="card">
   <div class="card-body p-2 px-3">
     <div class="floor-plan wall" id="floorPlan">
-      <div class="fp-hint"><i class="bi bi-arrows-move text-primary-custom"></i> Drag a table to reposition it</div>
+      <div class="fp-hint"><i class="bi bi-arrows-move text-primary-custom"></i> Drag tables on the selected floor</div>
+      <div class="fp-empty" id="floorEmpty">No tables on this floor.</div>
       <div class="fp-context" id="fpContext" role="menu"></div>
     </div>
-    <div class="fp-toast" id="fpToast"><i class="bi bi-check-circle-fill"></i><span id="fpToastText">Layout saved</span></div>
+    <div class="fp-toast" id="fpToast"><i class="bi bi-check-circle-fill"></i><span id="fpToastText">Saved</span></div>
   </div>
 </div>
 
-<!-- Payment modal -->
-<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h1 class="modal-title fs-6" id="paymentModalTitle">Collect Payment</h1>
+        <h1 class="modal-title fs-6">Table QR Codes</h1>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body" id="paymentModalBody">
-        <!-- JS-rendered payment stages -->
+      <div class="modal-body">
+        <div class="qr-print-grid" id="qrPrintGrid"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-primary" type="button" id="printQrBtn"><i class="bi bi-printer"></i> Print</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="modal fade" id="tablePaymentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="tablePaymentForm">
+      <div class="modal-header">
+        <h1 class="modal-title fs-6" id="tablePaymentTitle">Collect Payment</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="paymentTableId">
+        <div class="payment-total-box mb-3">
+          <span>Total order price</span>
+          <strong id="paymentOrderTotal">$0.00</strong>
+        </div>
+        <label class="form-label" for="paymentMethod">Payment method</label>
+        <select class="form-select" id="paymentMethod" required>
+          <option value="cash">Cash</option>
+          <option value="credit">Credit card</option>
+          <option value="cash_credit">Cash &amp; credit card</option>
+        </select>
+        <div class="row g-2 mt-2 d-none" id="mixedPaymentFields">
+          <div class="col-6">
+            <label class="form-label" for="paidCashAmount">Cash amount</label>
+            <input class="form-control" id="paidCashAmount" type="number" min="0" step="0.01">
+          </div>
+          <div class="col-6">
+            <label class="form-label" for="paidCreditAmount">Credit amount</label>
+            <input class="form-control" id="paidCreditAmount" type="number" min="0" step="0.01">
+          </div>
+        </div>
+        <div class="alert alert-info d-none mt-3 mb-0" id="paymentExtraAlert"></div>
+        <div class="alert alert-danger d-none mt-3 mb-0" id="paymentErrorAlert"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-cash-coin"></i> Paid</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -55,465 +115,833 @@
 (function () {
   'use strict';
 
-  var STORAGE_KEY = 'savora_admin_tables_plan';
+  var page = window.TABLES_PAGE || {};
+  var restaurantId = Number(page.restaurant_id || 0);
+  var canCreate = !!page.can_create;
+  var canUpdate = !!page.can_update;
+  var canDelete = !!page.can_delete;
+  var appBase = window.location.pathname.split('/admin')[0] || '';
+  var apiBase = appBase + '/api';
+  var webBase = window.location.origin + appBase + '/';
+  var adminCurrency = window.ADMIN_CURRENCY || {};
+  var currencySymbol = adminCurrency.symbol || adminCurrency.code || 'JOD';
+
   var canvas = document.getElementById('floorPlan');
-  var toast = document.getElementById('fpToast');
-  var toastText = document.getElementById('fpToastText');
+  var emptyState = document.getElementById('floorEmpty');
+  var floorSelect = document.getElementById('floorSelect');
+  var addFloorBtn = document.getElementById('addFloorBtn');
   var newTableBtn = document.getElementById('newTableBtn');
   var savePlanBtn = document.getElementById('savePlanBtn');
   var context = document.getElementById('fpContext');
+  var toast = document.getElementById('fpToast');
+  var toastText = document.getElementById('fpToastText');
+  var qrModalEl = document.getElementById('qrModal');
+  var qrGrid = document.getElementById('qrPrintGrid');
+  var printQrBtn = document.getElementById('printQrBtn');
+  var paymentModalEl = document.getElementById('tablePaymentModal');
+  var paymentForm = document.getElementById('tablePaymentForm');
+  var paymentMethod = document.getElementById('paymentMethod');
+  var mixedPaymentFields = document.getElementById('mixedPaymentFields');
+  var paymentExtraAlert = document.getElementById('paymentExtraAlert');
+  var paymentErrorAlert = document.getElementById('paymentErrorAlert');
+  var paymentTable = null;
+  var paymentOrderTotal = 0;
 
-  var TABLE_W = 92;   // table element width (px)
-  var TABLE_H = 116;   // approx full height (number + icon + badges)
-  var STATUSES = ['Free', 'Waiting order', 'Order done', 'Canceled'];
-  var STATUS_META = {
-    'Free':          { cls: 'free',     icon: 'bi-check2-circle' },
-    'Waiting order': { cls: 'waiting',  icon: 'bi-clipboard' },
-    'Order done':    { cls: 'done',     icon: 'bi-check2-square' },
-    'Canceled':      { cls: 'canceled', icon: 'bi-x-circle' }
-  };
+  var GRID_SIZE = 26;
+  var TABLE_W = GRID_SIZE * 4;
+  var TABLE_H = GRID_SIZE * 5;
   var tables = [];
-  var nextId = 1;
+  var restaurant = null;
+  var selectedFloor = 1;
+  var tempId = -1;
+  var tableDragging = false;
+  var tablesLiveLoading = false;
+  var tablesLiveTimer = null;
+  var statusMeta = {
+    free: { label: 'Free', cls: 'free', icon: 'bi-check2-circle' },
+    waiting_order: { label: 'Waiting order', cls: 'waiting', icon: 'bi-clipboard' },
+    order_done: { label: 'Order done', cls: 'done', icon: 'bi-check2-square' }
+  };
 
-  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-  function idLabel(t) { return 'T-' + String(t.id).padStart(2, '0'); }
-  function moneyStr(v) { v = (typeof v === 'number' && v > 0) ? v : 0; return '$' + v.toFixed(2); }
-  function normalStatus(s) { return STATUSES.indexOf(s) !== -1 ? s : 'Free'; }
-  function hasBill(s) { return s === 'Waiting order' || s === 'Order done'; }
-
-  function showToast(msg) {
-    toastText.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(function () { toast.classList.remove('show'); }, 2200);
+  function request(path, options) {
+    return fetch(apiBase + path, Object.assign({
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' }
+    }, options || {})).then(function (response) {
+      return response.json().catch(function () {
+        return { success: false, message: 'Invalid JSON response.' };
+      }).then(function (payload) {
+        if (!response.ok || payload.success === false) throw payload;
+        return payload;
+      });
+    });
   }
 
-  /* ===== Persistence ===== */
-  function loadTables() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) {
-          parsed.forEach(function (t) {
-            if (t.id >= nextId) nextId = t.id + 1;
-            // normalize old/legacy status values
-            if (t.status === 'Occupied' || t.status === 'Reserved') t.status = 'Waiting order';
-            t.status = normalStatus(t.status);
-          });
-          return parsed;
+  function escapeHtml(value) {
+    return String(value === null || value === undefined ? '' : value).replace(/[&<>"']/g, function (char) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char];
+    });
+  }
+
+  function showToast(message) {
+    toastText.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(function () { toast.classList.remove('show'); }, 2200);
+  }
+
+  function showError(message) {
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({ icon: 'error', title: 'Tables', text: message });
+      return;
+    }
+
+    window.alert(message);
+  }
+
+  function confirmAction(message) {
+    if (typeof Swal === 'undefined') {
+      return Promise.resolve(window.confirm(message));
+    }
+
+    return Swal.fire({
+      title: 'Are you sure?',
+      text: message,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#b8541b'
+    }).then(function (result) {
+      return result.isConfirmed;
+    });
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function snapToGrid(value) {
+    return Math.round(value / GRID_SIZE) * GRID_SIZE;
+  }
+
+  function parsePosition(table) {
+    if (table.position && typeof table.position === 'string') {
+      try {
+        table.position = JSON.parse(table.position);
+      } catch (error) {
+        table.position = null;
+      }
+    }
+
+    if (!table.position || typeof table.position !== 'object') {
+      table.position = { x: 24, y: 64 };
+    }
+
+    table.position.x = snapToGrid(Number(table.position.x || 24));
+    table.position.y = snapToGrid(Number(table.position.y || 64));
+
+    return table;
+  }
+
+  function currentTables() {
+    return tables.filter(function (table) {
+      return Number(table.table_floor || 1) === selectedFloor;
+    });
+  }
+
+  function tableRect(table, x, y) {
+    return {
+      left: x,
+      top: y,
+      right: x + TABLE_W,
+      bottom: y + TABLE_H
+    };
+  }
+
+  function rectsOverlap(a, b) {
+    return a.left < b.right
+      && a.right > b.left
+      && a.top < b.bottom
+      && a.bottom > b.top;
+  }
+
+  function positionIsFree(table, x, y) {
+    var rect = tableRect(table, x, y);
+
+    return currentTables().every(function (other) {
+      if (other === table || Number(other.id) === Number(table.id)) return true;
+
+      return !rectsOverlap(rect, tableRect(other, other.position.x, other.position.y));
+    });
+  }
+
+  function firstFreePosition(preferredX, preferredY, table) {
+    var maxX = Math.max(0, canvas.clientWidth - TABLE_W);
+    var maxY = Math.max(0, canvas.clientHeight - TABLE_H);
+    var startX = clamp(snapToGrid(preferredX), 0, maxX);
+    var startY = clamp(snapToGrid(preferredY), 0, maxY);
+
+    if (positionIsFree(table, startX, startY)) {
+      return { x: startX, y: startY };
+    }
+
+    for (var y = 0; y <= maxY; y += GRID_SIZE) {
+      for (var x = 0; x <= maxX; x += GRID_SIZE) {
+        if (positionIsFree(table, x, y)) {
+          return { x: x, y: y };
         }
       }
-    } catch (e) { /* fall through to seed */ }
-
-    return [
-      { id: 1, x: 70,  y: 90,  seats: 4, status: 'Free',          total: 0    },
-      { id: 2, x: 200, y: 180, seats: 6, status: 'Waiting order', total: 32.50 },
-      { id: 3, x: 340, y: 70,  seats: 2, status: 'Order done',    total: 42.50 },
-      { id: 4, x: 320, y: 300, seats: 8, status: 'Canceled',      total: 28.00 },
-      { id: 5, x: 540, y: 170, seats: 4, status: 'Order done',    total: 88.90 },
-      { id: 6, x: 40,  y: 330, seats: 2, status: 'Free',          total: 0    }
-    ];
-  }
-
-  function saveTables() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tables));
-      showToast('Layout saved (' + tables.length + ' tables)');
-    } catch (e) {
-      showToast('Could not save layout');
     }
+
+    return null;
   }
 
-  /* ===== Rendering ===== */
+  function arrangeCurrentFloorTables() {
+    var placed = [];
+    var maxX = Math.max(0, canvas.clientWidth - TABLE_W);
+    var maxY = Math.max(0, canvas.clientHeight - TABLE_H);
+
+    currentTables().forEach(function (table) {
+      var startX = clamp(snapToGrid(table.position.x), 0, maxX);
+      var startY = clamp(snapToGrid(table.position.y), 0, maxY);
+      var currentRect = tableRect(table, startX, startY);
+      var overlapsPlaced = placed.some(function (other) {
+        return rectsOverlap(currentRect, tableRect(other, other.position.x, other.position.y));
+      });
+
+      if (!overlapsPlaced) {
+        table.position = { x: startX, y: startY };
+        placed.push(table);
+        return;
+      }
+
+      for (var y = 0; y <= maxY; y += GRID_SIZE) {
+        for (var x = 0; x <= maxX; x += GRID_SIZE) {
+          var testRect = tableRect(table, x, y);
+          var blocked = placed.some(function (other) {
+            return rectsOverlap(testRect, tableRect(other, other.position.x, other.position.y));
+          });
+
+          if (!blocked) {
+            table.position = { x: x, y: y };
+            placed.push(table);
+            return;
+          }
+        }
+      }
+
+      table.position = { x: startX, y: startY };
+      placed.push(table);
+    });
+  }
+
+  function tableLabel(table) {
+    return 'T-' + String(table.table_number).padStart(2, '0');
+  }
+
+  function tableUrl(table) {
+    return webBase + '?r_code=' + encodeURIComponent(restaurant.main_code || '') + '&t_n=' + encodeURIComponent(table.table_number);
+  }
+
+  function money(value) {
+    return Number(value || 0).toFixed(2) + ' ' + currencySymbol;
+  }
+
+  function formatDate(value) {
+    if (!value) return '-';
+    var date = new Date(String(value).replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString();
+  }
+
+  function syncFloors() {
+    var floors = Array.from(new Set(tables.map(function (table) {
+      return Number(table.table_floor || 1);
+    }).concat([selectedFloor, 1]))).filter(function (floor) {
+      return floor > 0;
+    }).sort(function (a, b) {
+      return a - b;
+    });
+
+    floorSelect.innerHTML = floors.map(function (floor) {
+      return '<option value="' + floor + '">Floor ' + floor + '</option>';
+    }).join('');
+    floorSelect.value = String(selectedFloor);
+  }
+
   function render() {
-    canvas.querySelectorAll('.table-object').forEach(function (n) { n.remove(); });
-    tables.forEach(function (t) { canvas.appendChild(buildNode(t)); });
+    arrangeCurrentFloorTables();
+
+    canvas.querySelectorAll('.table-object').forEach(function (node) {
+      node.remove();
+    });
+
+    var rows = currentTables();
+    emptyState.classList.toggle('show', rows.length === 0);
+
+    rows.forEach(function (table) {
+      canvas.appendChild(buildTableNode(table));
+    });
   }
 
-  function buildNode(t) {
-    var el = document.createElement('div');
-    el.className = 'table-object';
-    el.style.left = t.x + 'px';
-    el.style.top = t.y + 'px';
-
-    var status = normalStatus(t.status);
-    var meta = STATUS_META[status] || STATUS_META['Free'];
-    var statusClass = meta.cls;
-
-    // Show the total price badge only when the table has an active bill.
-    var priceBadge = '';
-    if (hasBill(status)) {
-      var total = (typeof t.total === 'number' && t.total > 0) ? t.total : 0;
-      priceBadge = '<span class="table-badge table-badge-price" title="Total price">' +
-        '<i class="bi bi-cash-coin"></i> ' + moneyStr(total) + '</span>';
-    }
-
-    el.innerHTML =
-      '<div class="table-num">' + idLabel(t) + '</div>' +
+  function buildTableNode(table) {
+    var position = table.position || { x: 24, y: 64 };
+    var status = statusMeta[table.table_status] || statusMeta.free;
+    var node = document.createElement('div');
+    node.className = 'table-object';
+    node.style.left = position.x + 'px';
+    node.style.top = position.y + 'px';
+    node.innerHTML =
+      '<div class="table-num">' + escapeHtml(tableLabel(table)) + '</div>' +
       '<div class="table-icon-wrapper">' +
-        '<img class="table-icon" src="' + window.TABLE_ICON_URL + '" alt="' + idLabel(t) + '" draggable="false">' +
+        '<img class="table-icon" src="' + window.TABLE_ICON_URL + '" alt="' + escapeHtml(tableLabel(table)) + '" draggable="false">' +
       '</div>' +
       '<div class="table-badges">' +
-        priceBadge +
-        '<span class="table-badge table-status-tag ' + statusClass + '">' + status + '</span>' +
+        '<span class="table-badge table-status-tag ' + status.cls + '">' + escapeHtml(status.label) + '</span>' +
       '</div>';
 
-    bind(el, t);
-    return el;
+    bindTableNode(node, table);
+
+    return node;
   }
 
-  /* ===== Drag & drop ===== */
-  // Pointer-event based drag & drop. Clicking a table does nothing —
-  // status is changed only via the right-click context menu.
-  function bind(el, t) {
+  function bindTableNode(node, table) {
     var active = false;
+    var startX = 0;
+    var startY = 0;
+    var startLeft = 0;
+    var startTop = 0;
     var moved = false;
-    var sx = 0, sy = 0, sl = 0, st = 0;
 
-    el.addEventListener('pointerdown', function (e) {
+    node.addEventListener('pointerdown', function (event) {
+      if (event.button && event.button !== 0) return;
+
       active = true;
+      tableDragging = true;
       moved = false;
-      sx = e.clientX;
-      sy = e.clientY;
-      sl = t.x;
-      st = t.y;
-      el.classList.add('dragging');
-      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+      startX = event.clientX;
+      startY = event.clientY;
+      startLeft = table.position.x;
+      startTop = table.position.y;
+      if (canUpdate || table.id < 0) node.classList.add('dragging');
+      try { node.setPointerCapture(event.pointerId); } catch (error) {}
     });
 
-    el.addEventListener('pointermove', function (e) {
+    node.addEventListener('pointermove', function (event) {
       if (!active) return;
-      if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 3) moved = true;
-      var nx = clamp(sl + (e.clientX - sx), 0, canvas.clientWidth - TABLE_W);
-      var ny = clamp(st + (e.clientY - sy), 0, canvas.clientHeight - TABLE_H);
-      t.x = Math.round(nx);
-      t.y = Math.round(ny);
-      el.style.left = t.x + 'px';
-      el.style.top = t.y + 'px';
+      if (!canUpdate && table.id > 0) return;
+
+      moved = moved || Math.abs(event.clientX - startX) > 4 || Math.abs(event.clientY - startY) > 4;
+      var nextX = clamp(snapToGrid(startLeft + (event.clientX - startX)), 0, canvas.clientWidth - TABLE_W);
+      var nextY = clamp(snapToGrid(startTop + (event.clientY - startY)), 0, canvas.clientHeight - TABLE_H);
+      if (!positionIsFree(table, nextX, nextY)) return;
+
+      table.position.x = nextX;
+      table.position.y = nextY;
+      node.style.left = table.position.x + 'px';
+      node.style.top = table.position.y + 'px';
     });
 
-    var stop = function () {
+    function stop() {
       if (!active) return;
       active = false;
-      el.classList.remove('dragging');
-      // A plain click (no drag) on an "Order done" table opens the payment popup.
-      if (!moved && t.status === 'Order done') openPayment(t);
-    };
+      tableDragging = false;
+      node.classList.remove('dragging');
+    }
 
-    el.addEventListener('pointerup', stop);
-    el.addEventListener('pointercancel', stop);
-
-    el.addEventListener('contextmenu', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      openContext(e, t, el);
+    node.addEventListener('pointerup', function (event) {
+      var wasMoved = moved;
+      stop();
+      if (!wasMoved) {
+        ignoreNextDocumentClick = true;
+        openContext(event, table, node);
+      }
+    });
+    node.addEventListener('pointercancel', stop);
+    node.addEventListener('contextmenu', function (event) {
+      event.preventDefault();
+      openContext(event, table, node);
     });
   }
 
-  /* ===== Context menu ===== */
-  var _ctxTable = null;    // table the menu belongs to
-  var _ctxEl = null;       // the menu's table element
+  var contextTable = null;
+  var contextNode = null;
+  var ignoreNextDocumentClick = false;
 
-  function openContext(e, t, el) {
-    _ctxTable = t;
-    _ctxEl = el;
-    el.classList.add('dragging');
+  function openContext(event, table, node) {
+    closeContext();
+    contextTable = table;
+    contextNode = node;
+    node.classList.add('selected');
 
-    var options = statusOptions(t);
-    var html = '<div class="ctx-title">' + idLabel(t) + ' — Status</div>';
-    options.forEach(function (o) {
-      html += '<button class="ctx-item" data-action="' + o.action + '">' +
-        '<i class="bi ' + o.icon + '"></i> ' + o.label + '</button>';
-    });
-    html += '<div class="ctx-sep"></div>' +
-      '<button class="ctx-item" data-action="duplicate"><i class="bi bi-copy"></i> Duplicate</button>' +
-      '<button class="ctx-item danger" data-action="remove"><i class="bi bi-trash"></i> Remove table</button>';
+    var html = '<div class="ctx-title">' + escapeHtml(tableLabel(table)) + '</div>';
+    if (canUpdate || table.id < 0) {
+      statusActions(table).forEach(function (item) {
+        html += '<button class="ctx-item" type="button" data-action="' + item.action + '">' +
+          '<i class="bi ' + item.icon + '"></i> ' + item.label + '</button>';
+      });
+      html += '<div class="ctx-sep"></div>';
+    }
+    html += '<button class="ctx-item" type="button" data-action="qr"><i class="bi bi-qr-code"></i> QR code</button>';
+    if (canDelete || table.id < 0) {
+      html += '<button class="ctx-item danger" type="button" data-action="remove"><i class="bi bi-trash"></i> Remove table</button>';
+    }
 
     context.innerHTML = html;
 
-    // Position the menu near the cursor, keeping it inside the canvas.
     var rect = canvas.getBoundingClientRect();
-    var menuW = context.offsetWidth || 190;
-    var menuH = context.offsetHeight || 150;
-    var x = e.clientX - rect.left;
-    var y = e.clientY - rect.top;
-    if (x + menuW > rect.width) x = rect.width - menuW - 8;
-    if (y + menuH > rect.height) y = rect.height - menuH - 8;
-    x = Math.max(6, x);
-    y = Math.max(6, y);
-    context.style.left = x + 'px';
-    context.style.top = y + 'px';
+    context.style.left = clamp(event.clientX - rect.left, 6, rect.width - 190) + 'px';
+    context.style.top = clamp(event.clientY - rect.top, 6, rect.height - 160) + 'px';
     context.classList.add('show');
-  }
-
-  // Possible status transitions based on the current status:
-  //  Free -> Waiting order
-  //  Waiting order -> Order done / Canceled
-  //  Order done -> Free (collect payment)
-  //  Canceled -> Free / Waiting order
-  function statusOptions(t) {
-    var icon = function (s) { return (STATUS_META[s] || {}).icon || 'bi-arrow-right-circle'; };
-    switch (t.status) {
-      case 'Waiting order':
-        return [
-          { label: 'Order done', action: 'set:Order done', icon: icon('Order done') },
-          { label: 'Canceled',   action: 'set:Canceled',   icon: icon('Canceled') }
-        ];
-      case 'Order done':
-        return [
-          { label: 'Free (collect payment)', action: 'payment', icon: 'bi-cash-coin' }
-        ];
-      case 'Canceled':
-        return [
-          { label: 'Free again', action: 'set:Free', icon: 'bi-arrow-counterclockwise' }
-        ];
-      case 'Free':
-      default:
-        return [
-          { label: 'Waiting order', action: 'set:Waiting order', icon: icon('Waiting order') }
-        ];
-    }
   }
 
   function closeContext() {
     context.classList.remove('show');
-    if (_ctxEl) _ctxEl.classList.remove('dragging');
-    _ctxTable = null;
-    _ctxEl = null;
+    if (contextNode) contextNode.classList.remove('selected');
+    contextTable = null;
+    contextNode = null;
   }
 
-  function onContextAction(e) {
-    var btn = e.target.closest('[data-action]');
-    if (!btn || !_ctxTable) return;
-    var action = btn.getAttribute('data-action');
-    var t = _ctxTable;
-    var el = _ctxEl;
-    closeContext();
+  function nextTableNumber() {
+    return tables.reduce(function (max, table) {
+      return Math.max(max, Number(table.table_number || 0));
+    }, 0) + 1;
+  }
 
-    if (action === 'remove') {
-      var i = tables.indexOf(t);
-      if (i !== -1) {
-        tables.splice(i, 1);
-        render();
-        showToast('Removed ' + idLabel(t));
-      }
-    } else if (action === 'duplicate') {
-      tables.push({
-        id: nextId++,
-        x: Math.min(t.x + 28, canvas.clientWidth - TABLE_W),
-        y: Math.min(t.y + 28, canvas.clientHeight - TABLE_H),
-        seats: t.seats,
-        status: t.status,
-        total: t.total
-      });
-      render();
-      showToast('Duplicated ' + idLabel(t));
-    } else if (action === 'payment') {
-      openPayment(t);
-    } else if (action.indexOf('set:') === 0) {
-      var target = action.slice(4);
-      if (STATUSES.indexOf(target) !== -1) {
-        setStatus(t, target);
-      }
+  function addTable() {
+    if (!canCreate) return;
+
+    var count = currentTables().length;
+    var x = 24 + ((count * 34) % Math.max(120, canvas.clientWidth - TABLE_W - 24));
+    var y = 64 + (Math.floor(count / 5) * 130);
+    var table = parsePosition({
+      id: tempId--,
+      table_number: nextTableNumber(),
+      table_status: 'free',
+      table_floor: selectedFloor,
+      position: { x: snapToGrid(x), y: snapToGrid(y) },
+      order_id: null,
+      restaurant_id: restaurantId
+    });
+    var position = firstFreePosition(x, y, table);
+
+    if (!position) {
+      showError('No free grid space on this floor.');
+      return;
     }
-  }
 
-  function setStatus(t, s) {
-    t.status = s;
+    table.position = position;
+    tables.push(table);
+
+    syncFloors();
     render();
-    saveTables();
+    showToast('Table added to floor ' + selectedFloor);
   }
 
-  context.addEventListener('click', onContextAction);
-
-  // Close menu when clicking anywhere else, scrolling, or pressing Esc.
-  document.addEventListener('click', function (e) {
-    if (context.classList.contains('show') && !context.contains(e.target)) {
-      closeContext();
+  function statusActions(table) {
+    if (table.id < 0) {
+      return [];
     }
-  });
-  document.addEventListener('contextmenu', function (e) {
-    if (context.classList.contains('show') && !context.contains(e.target)) {
-      closeContext();
+
+    if (table.table_status === 'waiting_order') {
+      return [
+        { action: 'status:order_done', label: 'Order done', icon: statusMeta.order_done.icon },
+        { action: 'status-cancel', label: 'Cancel order', icon: 'bi-x-circle' }
+      ];
     }
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeContext();
-  });
-  window.addEventListener('resize', closeContext);
 
-  /* ===== Payment modal ===== */
-  var _payTable = null;             // table being paid / freed
-  var paymentBody = document.getElementById('paymentModalBody');
-  var paymentTitle = document.getElementById('paymentModalTitle');
-  var paymentModal = null;
+    if (table.table_status === 'order_done') {
+      return [
+        { action: 'payment', label: 'Free table', icon: 'bi-cash-coin' }
+      ];
+    }
 
-  function getModal() {
-    if (!paymentModal) paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
-    return paymentModal;
+    return [];
   }
 
-  function openPayment(t) {
-    _payTable = t;
-    paymentTitle.textContent = 'Collect Payment — ' + idLabel(t) + ' (' + moneyStr(t.total) + ')';
-    showPayTypes();
-    getModal().show();
+  function addFloor() {
+    if (!canCreate) return;
+
+    var nextFloor = Math.max.apply(null, Array.from(new Set(tables.map(function (table) {
+      return Number(table.table_floor || 1);
+    }).concat([1])))) + 1;
+
+    selectedFloor = nextFloor;
+    syncFloors();
+    render();
+    showToast('Floor ' + nextFloor + ' selected');
   }
 
-  // Stage 1: choose payment type.
-  function showPayTypes() {
-    paymentBody.innerHTML =
-      '<p class="text-muted small mb-3 text-center">Select payment type</p>' +
-      '<div class="d-grid gap-2">' +
-        '<button class="btn btn-outline-primary pay-type" data-type="cash">' +
-          '<i class="bi bi-cash-coin me-2"></i>Cash</button>' +
-        '<button class="btn btn-outline-primary pay-type" data-type="card">' +
-          '<i class="bi bi-credit-card me-2"></i>Credit card</button>' +
-        '<button class="btn btn-primary pay-type" data-type="mixed">' +
-          '<i class="bi bi-cash-stack me-2"></i>Cash &amp; Credit card</button>' +
-      '</div>';
+  function tablePayload(table) {
+    return {
+      table_number: Number(table.table_number),
+      table_status: table.table_status || 'free',
+      table_floor: Number(table.table_floor || selectedFloor),
+      position: {
+        x: Number(table.position.x || 0),
+        y: Number(table.position.y || 0)
+      },
+      order_id: table.order_id || null,
+      restaurant_id: restaurantId
+    };
+  }
 
-    paymentBody.querySelectorAll('.pay-type').forEach(function (b) {
-      b.addEventListener('click', function () {
-        choosePayType(b.getAttribute('data-type'));
-      });
+  function updateTableStatus(table, payload) {
+    return request('/tables/' + table.id + '/status', {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    }).then(function (response) {
+      if (response.data && Number(response.data.extra_paid || 0) > 0) {
+        showToast('Extra paid: ' + money(response.data.extra_paid));
+      } else {
+        showToast(response.message || 'Table updated');
+      }
+
+      return loadTables();
     });
   }
 
-  // Stage 2: single-method success, or split (cash & card) form.
-  function choosePayType(type) {
-    if (type === 'mixed') {
-      showSplitPayment();
+  function fetchOrderTotal(table) {
+    if (!table.order_id) {
+      return Promise.resolve(0);
+    }
+
+    return request('/orders/' + encodeURIComponent(table.order_id)).then(function (payload) {
+      var rows = payload.data || [];
+      var first = rows[0] || {};
+      return Number(first.order_price || first.price || 0);
+    });
+  }
+
+  function openPayment(table) {
+    paymentTable = table;
+    paymentOrderTotal = 0;
+    paymentForm.reset();
+    paymentErrorAlert.classList.add('d-none');
+    paymentExtraAlert.classList.add('d-none');
+    mixedPaymentFields.classList.add('d-none');
+    document.getElementById('paymentTableId').value = table.id;
+    document.getElementById('tablePaymentTitle').textContent = 'Collect Payment - ' + tableLabel(table);
+    document.getElementById('paymentOrderTotal').textContent = 'Loading...';
+
+    bootstrap.Modal.getOrCreateInstance(paymentModalEl).show();
+
+    fetchOrderTotal(table).then(function (total) {
+      paymentOrderTotal = total;
+      document.getElementById('paymentOrderTotal').textContent = money(total);
+      updatePaymentExtra();
+    }).catch(function (error) {
+      paymentErrorAlert.textContent = error.message || 'Unable to load order total.';
+      paymentErrorAlert.classList.remove('d-none');
+    });
+  }
+
+  function updatePaymentExtra() {
+    if (paymentMethod.value !== 'cash_credit') {
+      paymentExtraAlert.classList.add('d-none');
+      return;
+    }
+
+    var cash = Number(document.getElementById('paidCashAmount').value || 0);
+    var credit = Number(document.getElementById('paidCreditAmount').value || 0);
+    var extra = (cash + credit) - paymentOrderTotal;
+
+    if (extra > 0) {
+      paymentExtraAlert.textContent = 'An additional charge was applied to the customer: ' + money(extra);
+      paymentExtraAlert.classList.remove('d-none');
     } else {
-      var label = (type === 'cash') ? 'Cash' : 'Credit card';
-      paymentBody.innerHTML =
-        '<div class="text-center py-4">' +
-          '<i class="bi bi-check-circle-fill text-success" style="font-size:4rem;"></i>' +
-          '<h5 class="mt-3 mb-1">' + label + ' received</h5>' +
-          '<p class="text-muted small mb-0">' + idLabel(_payTable) + ' is now free</p>' +
-        '</div>';
-      freeTableAfter(1300);
+      paymentExtraAlert.classList.add('d-none');
     }
   }
 
-  function freeTableAfter(ms) {
-    setTimeout(function () {
-      if (_payTable) {
-        _payTable.status = 'Free';
-      }
-      saveTables();
-      render();
-      getModal().hide();
-      if (_payTable) showToast(idLabel(_payTable) + ' is now Free');
-      _payTable = null;
-    }, ms);
-  }
+  function paymentPayload() {
+    var method = paymentMethod.value;
+    var payload = {
+      table_status: 'free',
+      payment_method: method
+    };
 
-  // Stage 3: split (Cash & Credit card) — back + two amount inputs.
-  function showSplitPayment() {
-    paymentBody.innerHTML =
-      '<button type="button" class="btn btn-sm btn-link mb-2 px-0" id="mixedBackBtn">' +
-        '<i class="bi bi-arrow-left me-1"></i>Back</button>' +
-
-      '<div class="row g-2 mb-2">' +
-        '<div class="col-6">' +
-          '<label class="form-label small fw-semibold" for="cashAmount">Cash paid</label>' +
-          '<div class="input-group fp-amt">' +
-            '<span class="input-group-text"><i class="bi bi-cash-coin"></i></span>' +
-            '<input type="number" class="form-control" id="cashAmount" min="0" step="0.01" placeholder="0.00">' +
-          '</div>' +
-        '</div>' +
-        '<div class="col-6">' +
-          '<label class="form-label small fw-semibold" for="cardAmount">Card paid</label>' +
-          '<div class="input-group fp-amt">' +
-            '<span class="input-group-text"><i class="bi bi-credit-card"></i></span>' +
-            '<input type="number" class="form-control" id="cardAmount" min="0" step="0.01" placeholder="0.00">' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-
-      '<div id="mixedError" class="text-danger small d-none mb-2">' +
-        '<i class="bi bi-exclamation-triangle me-1"></i>Two amounts must be provided</div>' +
-
-      '<div id="mixedSuccess" class="text-center d-none py-2">' +
-        '<i class="bi bi-check-circle-fill text-success" style="font-size:3.2rem;"></i>' +
-        '<div class="text-muted small mt-1">Payment complete</div>' +
-      '</div>' +
-
-      '<button type="button" class="btn btn-primary w-100" id="updatePayBtn">Update status</button>';
-
-    var backBtn = document.getElementById('mixedBackBtn');
-    var cashEl = document.getElementById('cashAmount');
-    var cardEl = document.getElementById('cardAmount');
-    var updateBtn = document.getElementById('updatePayBtn');
-    var errorEl = document.getElementById('mixedError');
-    var successEl = document.getElementById('mixedSuccess');
-
-    backBtn.addEventListener('click', showPayTypes);
-
-    function bothFilled() {
-      return cashEl.value.trim() !== '' && cardEl.value.trim() !== '';
+    if (method === 'cash_credit') {
+      payload.total_paid_cash = Number(document.getElementById('paidCashAmount').value || 0);
+      payload.total_paid_credit = Number(document.getElementById('paidCreditAmount').value || 0);
     }
 
-    function clearInvalid() {
-      [cashEl, cardEl].forEach(function (inp) {
-        inp.classList.remove('is-invalid');
-        var w = inp.closest('.fp-amt');
-        if (w) w.classList.remove('fp-shake');
+    return payload;
+  }
+
+  function saveTables() {
+    if (!restaurantId) {
+      showError('Restaurant is required before saving tables.');
+      return;
+    }
+
+    var rows = currentTables();
+    var hasOverlap = rows.some(function (table, index) {
+      return rows.slice(index + 1).some(function (other) {
+        return rectsOverlap(
+          tableRect(table, table.position.x, table.position.y),
+          tableRect(other, other.position.x, other.position.y)
+        );
       });
-      errorEl.classList.add('d-none');
+    });
+
+    if (hasOverlap) {
+      showError('Two tables cannot be in the same grid space.');
+      return;
     }
 
-    function validateMix() {
-      clearInvalid();
-      if (bothFilled()) {
-        successEl.classList.remove('d-none');
-      } else {
-        successEl.classList.add('d-none');
+    var writes = rows.map(function (table) {
+      if (table.id < 0) {
+        if (!canCreate) return null;
+
+        return request('/tables', {
+          method: 'POST',
+          body: JSON.stringify(tablePayload(table))
+        });
       }
-    }
 
-    cashEl.addEventListener('input', validateMix);
-    cardEl.addEventListener('input', validateMix);
+      if (!canUpdate) return null;
 
-    updateBtn.addEventListener('click', function () {
-      if (bothFilled()) {
-        freeTableAfter(200);
+      return request('/tables/' + table.id, {
+        method: 'PUT',
+        body: JSON.stringify(tablePayload(table))
+      });
+    }).filter(Boolean);
+
+    Promise.all(writes).then(function () {
+      showToast('Floor ' + selectedFloor + ' saved');
+      return loadTables();
+    }).catch(function (error) {
+      var message = error.message || 'Unable to save tables.';
+      if (error.errors) message = Object.values(error.errors).join(' ');
+      showError(message);
+    });
+  }
+
+  function removeTable(table) {
+    confirmAction('Delete ' + tableLabel(table) + '?').then(function (confirmed) {
+      if (!confirmed) return;
+
+      if (table.id < 0) {
+        tables = tables.filter(function (row) { return row !== table; });
+        render();
         return;
       }
-      // One (or both) is empty -> shake + danger border + message.
-      errorEl.classList.remove('d-none');
-      successEl.classList.add('d-none');
-      if (cashEl.value.trim() === '') flagInvalid(cashEl);
-      if (cardEl.value.trim() === '') flagInvalid(cardEl);
+
+      request('/tables/' + table.id, { method: 'DELETE' }).then(function () {
+        tables = tables.filter(function (row) { return row.id !== table.id; });
+        syncFloors();
+        render();
+        showToast('Table deleted');
+      }).catch(function (error) {
+        showError(error.message || 'Unable to delete table.');
+      });
+    });
+  }
+
+  function showQrModal(rows) {
+    if (!restaurant || !restaurant.main_code) {
+      showError('Restaurant code is required to generate QR codes.');
+      return;
+    }
+
+    qrGrid.innerHTML = rows.map(function (table) {
+      var url = tableUrl(table);
+      return '<div class="qr-card">' +
+        '<div class="qr-box" data-url="' + escapeHtml(url) + '"></div>' +
+        '<div class="qr-title">' + escapeHtml(tableLabel(table)) + '</div>' +
+        '<div class="qr-url">' + escapeHtml(url) + '</div>' +
+      '</div>';
+    }).join('');
+
+    qrGrid.querySelectorAll('.qr-box').forEach(function (box) {
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(box, {
+          text: box.getAttribute('data-url'),
+          width: 132,
+          height: 132,
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } else {
+        box.textContent = box.getAttribute('data-url');
+      }
     });
 
-    function flagInvalid(inp) {
-      inp.classList.add('is-invalid');
-      var w = inp.closest('.fp-amt');
-      if (w) {
-        w.classList.remove('fp-shake');
-        void w.offsetWidth; // restart the shake animation
-        w.classList.add('fp-shake');
-      }
+    bootstrap.Modal.getOrCreateInstance(qrModalEl).show();
+  }
+
+  function loadTables() {
+    return request('/tables?restaurant_id=' + encodeURIComponent(restaurantId)).then(function (payload) {
+      tables = (payload.data || []).map(parsePosition);
+      syncFloors();
+      render();
+    });
+  }
+
+  function refreshTableStatuses() {
+    if (tablesLiveLoading || tableDragging || currentTables().some(function (table) { return table.id < 0; })) return;
+    tablesLiveLoading = true;
+
+    request('/tables?restaurant_id=' + encodeURIComponent(restaurantId)).then(function (payload) {
+      var liveRows = (payload.data || []).map(parsePosition);
+      var currentById = {};
+
+      tables.forEach(function (table) {
+        if (table.id > 0) currentById[Number(table.id)] = table;
+      });
+
+      liveRows.forEach(function (live) {
+        var existing = currentById[Number(live.id)];
+
+        if (existing) {
+          existing.table_status = live.table_status;
+          existing.order_id = live.order_id;
+          existing.table_number = live.table_number;
+          existing.table_floor = live.table_floor;
+          existing.restaurant_id = live.restaurant_id;
+          return;
+        }
+
+        tables.push(live);
+      });
+
+      tables = tables.filter(function (table) {
+        return table.id < 0 || liveRows.some(function (live) {
+          return Number(live.id) === Number(table.id);
+        });
+      });
+
+      syncFloors();
+      render();
+    }).catch(function () {
+      // Keep the current floor plan if a background refresh fails.
+    }).finally(function () {
+      tablesLiveLoading = false;
+    });
+  }
+
+  function loadRestaurant() {
+    return request('/restaurants/' + encodeURIComponent(restaurantId)).then(function (payload) {
+      restaurant = payload.data || {};
+    });
+  }
+
+  context.addEventListener('click', function (event) {
+    var button = event.target.closest('[data-action]');
+    if (!button || !contextTable) return;
+
+    var action = button.getAttribute('data-action');
+    var table = contextTable;
+    closeContext();
+
+    if (action === 'status:order_done') {
+      updateTableStatus(table, { table_status: 'order_done' }).catch(function (error) {
+        showError(error.message || 'Unable to update table.');
+      });
+      return;
     }
-  }
 
-  /* ===== Buttons ===== */
-  function addTable() {
-    var x = 24 + Math.floor(Math.random() * Math.max(1, canvas.clientWidth - TABLE_W - 24));
-    var y = 60 + Math.floor(Math.random() * Math.max(1, 240));
-    tables.push({ id: nextId++, x: x, y: y, seats: 4, status: 'Free', total: 0 });
+    if (action === 'status-cancel') {
+      confirmAction('Cancel this order and free the table?').then(function (confirmed) {
+        if (!confirmed) return;
+        updateTableStatus(table, { table_status: 'free' }).catch(function (error) {
+          showError(error.message || 'Unable to cancel order.');
+        });
+      });
+      return;
+    }
+
+    if (action === 'payment') {
+      openPayment(table);
+      return;
+    }
+
+    if (action === 'qr') {
+      showQrModal([table]);
+      return;
+    }
+
+    if (action === 'remove') {
+      removeTable(table);
+    }
+  });
+
+  document.addEventListener('click', function (event) {
+    if (ignoreNextDocumentClick) {
+      ignoreNextDocumentClick = false;
+      return;
+    }
+
+    if (context.classList.contains('show') && !context.contains(event.target)) {
+      closeContext();
+    }
+  });
+
+  floorSelect.addEventListener('change', function () {
+    selectedFloor = Number(floorSelect.value || 1);
     render();
-    showToast('Added ' + idLabel({ id: nextId - 1 }));
+  });
+
+  if (newTableBtn) newTableBtn.addEventListener('click', addTable);
+  if (addFloorBtn) addFloorBtn.addEventListener('click', addFloor);
+  if (savePlanBtn) savePlanBtn.addEventListener('click', saveTables);
+  if (printQrBtn) printQrBtn.addEventListener('click', function () { window.print(); });
+  if (paymentMethod) {
+    paymentMethod.addEventListener('change', function () {
+      mixedPaymentFields.classList.toggle('d-none', paymentMethod.value !== 'cash_credit');
+      updatePaymentExtra();
+    });
+  }
+  ['paidCashAmount', 'paidCreditAmount'].forEach(function (id) {
+    var input = document.getElementById(id);
+    if (input) input.addEventListener('input', updatePaymentExtra);
+  });
+  if (paymentForm) {
+    paymentForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      paymentErrorAlert.classList.add('d-none');
+
+      if (!paymentTable) return;
+
+      var payload = paymentPayload();
+      if (
+        payload.payment_method === 'cash_credit'
+        && (Number(payload.total_paid_cash || 0) + Number(payload.total_paid_credit || 0)) < paymentOrderTotal
+      ) {
+        paymentErrorAlert.textContent = 'Paid total must be higher than or equal to the order total.';
+        paymentErrorAlert.classList.remove('d-none');
+        return;
+      }
+
+      updateTableStatus(paymentTable, payload).then(function () {
+        bootstrap.Modal.getOrCreateInstance(paymentModalEl).hide();
+        paymentTable = null;
+      }).catch(function (error) {
+        var message = error.message || 'Unable to save payment.';
+        if (error.errors) message = Object.values(error.errors).join(' ');
+        paymentErrorAlert.textContent = message;
+        paymentErrorAlert.classList.remove('d-none');
+      });
+    });
   }
 
-  newTableBtn.addEventListener('click', addTable);
-  savePlanBtn.addEventListener('click', saveTables);
+  if (!restaurantId) {
+    showError('No active restaurant selected.');
+    return;
+  }
 
-  /* ===== Init ===== */
-  tables = loadTables();
-  render();
+  Promise.all([loadRestaurant(), loadTables()]).catch(function (error) {
+    showError(error.message || 'Unable to load tables.');
+  });
+
+  tablesLiveTimer = window.setInterval(function () {
+    if (document.hidden || context.classList.contains('show') || paymentModalEl.classList.contains('show')) return;
+    refreshTableStatuses();
+  }, 1000);
+
+  window.addEventListener('beforeunload', function () {
+    if (tablesLiveTimer) window.clearInterval(tablesLiveTimer);
+  });
 })();
 </script>

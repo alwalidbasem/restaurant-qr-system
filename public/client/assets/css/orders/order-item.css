@@ -24,10 +24,17 @@
 }
 .order-item__addons {
   margin-top: 0.35rem;
-  display: grid;
-  gap: 0.12rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
   font-size: 0.78rem;
   color: var(--color-text-faint);
+}
+.order-item__addons span {
+  border: 1px solid var(--tint-accent-18);
+  border-radius: 999px;
+  background: var(--tint-accent-10);
+  padding: 0.18rem 0.48rem;
 }
 .order-item__controls {
   display: flex;
@@ -45,7 +52,7 @@
   font-size: 0.9rem;
   transition: background var(--transition-fast);
 }
-.order-item__qty-btn:hover { background: rgba(244, 236, 224, 0.08); }
+.order-item__qty-btn:hover { background: var(--tint-text-08); }
 .order-item__qty { font-family: var(--font-mono); font-size: 0.9rem; min-width: 18px; text-align: center; }
 .order-item__remove {
   justify-self: end;

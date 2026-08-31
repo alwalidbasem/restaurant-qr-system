@@ -18,8 +18,8 @@
 }
 .food-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(224, 135, 47, 0.45);
-  box-shadow: 0 20px 40px -20px rgba(0,0,0,0.6);
+  border-color: var(--tint-accent-45);
+  box-shadow: 0 20px 40px -20px var(--shadow-card-hover);
 }
 
 @keyframes cardIn {
@@ -45,9 +45,9 @@
   top: 0.85rem;
   left: 0.85rem;
   z-index: 3;
-  background: rgba(27, 20, 15, 0.85);
+  background: var(--overlay-food-badge-bg);
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(224, 135, 47, 0.5);
+  border: 1px solid var(--tint-accent-50);
   color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: 0.7rem;
@@ -63,7 +63,7 @@
   z-index: 2;
   width: 100%;
   border: none;
-  background: transparent;
+  background: var(--color-transparent);
   cursor: pointer;
 }
 
@@ -104,10 +104,19 @@
 }
 
 .food-card__price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 1.05rem;
   color: var(--color-gold);
+}
+
+.food-card__old-price {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  text-decoration: line-through;
 }
 
 .empty-state {
