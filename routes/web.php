@@ -4,7 +4,7 @@ use App\Controllers\DashboardController;
 use App\Controllers\FoodController;
 use App\Controllers\OrderController;
 use App\Controllers\TableController;
-use App\Controllers\EmployeeController;
+use App\Controllers\StaffController;
 
 
 return [
@@ -41,9 +41,9 @@ return [
 
 
     // =========================
-    // Employees Pages
+    // staff Pages
     // =========================
-    // ['GET', '/admin/employees', [EmployeeController::class, 'index']],
+    // ['GET', '/admin/staff', [StaffController::class, 'index']],
 
 
     // =========================

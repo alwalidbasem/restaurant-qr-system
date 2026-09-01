@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../Middleware/PermissionsMiddleware.php';
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../../Models/CategoriesModel.php';
-require_once __DIR__ . '/../../Models/EmployeeModel.php';
+require_once __DIR__ . '/../../Models/StaffModel.php';
 require_once __DIR__ . '/../../Models/FoodModel.php';
 require_once __DIR__ . '/../../Models/RestaurantModel.php';
 require_once __DIR__ . '/../../Services/DiscountService.php';
@@ -100,7 +100,7 @@ class FoodController
     private Food $foodModel;
     private Category $categoryModel;
     private Restaurant $restaurantModel;
-    private Employee $employeeModel;
+    private Staff $employeeModel;
     private DiscountService $discountService;
     private FoodValidator $validator;
     private PDO $db;
@@ -134,7 +134,7 @@ class FoodController
         $this->foodModel = new Food($db);
         $this->categoryModel = new Category($db);
         $this->restaurantModel = new Restaurant($db);
-        $this->employeeModel = new Employee($db);
+        $this->employeeModel = new Staff($db);
         $this->discountService = new DiscountService($db);
         $this->validator = new FoodValidator();
     }

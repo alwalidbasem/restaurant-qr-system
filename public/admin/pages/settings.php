@@ -1,4 +1,5 @@
 <?php
+/** @var array $admin_context Injected by public/admin/view.php before include. */
 $restaurantId = (int) ($admin_context['active_restaurant_id'] ?? 0);
 $canUpdateRestaurant = admin_can($admin_context, 'restaurant.update');
 ?>
@@ -10,7 +11,7 @@ $canUpdateRestaurant = admin_can($admin_context, 'restaurant.update');
 <div class="card">
   <div class="card-header d-flex align-items-center justify-content-between">
     <span>Restaurant Settings</span>
-    <small class="text-secondary">ID and code are locked for restaurant employees</small>
+    <small class="text-secondary">ID and code are locked for restaurant staff</small>
   </div>
   <div class="card-body">
     <div class="alert alert-danger d-none" id="restaurantSettingsAlert"></div>

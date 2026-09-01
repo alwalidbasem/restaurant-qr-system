@@ -100,6 +100,10 @@ class controllersHelper
 
     public static function isSuperAdminEmployee(array $employee): bool
     {
+        if (array_key_exists('is_superadmin', $employee)) {
+            return (int) ($employee['is_superadmin'] ?? 0) === 1;
+        }
+
         $webAdmins = require __DIR__ . '/../Middleware/permissions_config/restaurant_crud_admins.php';
         $webAdminIds = array_map('intval', $webAdmins['employee_ids'] ?? $webAdmins);
 
@@ -107,10 +111,72 @@ class controllersHelper
             && in_array((int) ($employee['id'] ?? 0), $webAdminIds, true);
     }
 
-    public static function permissionMap(?array $employee = null): array
+    public static function permissionDefinitions(): array
     {
         $definitions = require __DIR__ . '/../Middleware/permissions_config/definitions.php';
-        $keys = array_keys($definitions);
+        if (isset($definitions['is_superadmin']) || isset($definitions['is_owner']) || isset($definitions['is_manager']) || isset($definitions['is_employee'])) {
+            $flat = [];
+            foreach (['is_superadmin', 'is_manager', 'is_employee'] as $role) {
+                foreach (($definitions[$role] ?? []) ?: [] as $key => $label) {
+                    $flat[$key] = $label;
+                }
+            }
+
+            return $flat;
+        }
+
+        return $definitions;
+    }
+
+    public static function permissionRoleDefinitions(): array
+    {
+        $definitions = require __DIR__ . '/../Middleware/permissions_config/definitions.php';
+
+        return isset($definitions['is_superadmin']) || isset($definitions['is_owner']) || isset($definitions['is_manager']) || isset($definitions['is_employee'])
+            ? $definitions
+            : [
+                'is_superadmin' => array_slice($definitions, 0, 4, true),
+                'is_owner' => null,
+                'is_manager' => array_intersect_key($definitions, array_flip(['branches.create', 'branches.get', 'branches.update', 'branches.delete', 'branches_logs.get'])),
+                'is_employee' => array_diff_key($definitions, array_flip(['restaurants.create', 'restaurants.get', 'restaurants.update', 'restaurants.delete', 'branches.create', 'branches.get', 'branches.update', 'branches.delete', 'branches_logs.get', 'branches_dashboard.get', 'managers.create', 'managers.get', 'managers.update', 'managers.delete'])),
+            ];
+    }
+
+    public static function permissionKeys(): array
+    {
+        return array_keys(self::permissionDefinitions());
+    }
+
+    public static function employeeRoleKey(?array $employee): string
+    {
+        if ($employee === null) {
+            return 'guest';
+        }
+
+        foreach (['is_superadmin', 'is_owner', 'is_manager', 'is_employee'] as $role) {
+            if (!empty($employee[$role])) {
+                return $role;
+            }
+        }
+
+        return 'is_employee';
+    }
+
+    public static function roleAllowedPermissions(?array $employee): ?array
+    {
+        $role = self::employeeRoleKey($employee);
+        $definitions = self::permissionRoleDefinitions();
+
+        if ($role === 'is_owner') {
+            return null;
+        }
+
+        return $definitions[$role] ?? [];
+    }
+
+    public static function permissionMap(?array $employee = null): array
+    {
+        $keys = self::permissionKeys();
         $values = array_map('trim', explode(',', (string) ($employee['permissions'] ?? '')));
         $map = [];
 
@@ -128,7 +194,28 @@ class controllersHelper
         }
 
         if (self::isSuperAdminEmployee($employee)) {
+            if (in_array($permission, ['restaurants.create', 'restaurants.get', 'restaurants.update', 'restaurants.delete'], true)) {
+                return !empty(self::permissionMap($employee)[$permission]);
+            }
             return true;
+        }
+
+        if (!empty($employee['is_owner'])) {
+            return !isset((self::permissionRoleDefinitions()['is_superadmin'] ?? [])[$permission]);
+        }
+
+        if (!empty($employee['is_manager'])) {
+            // A manager's capabilities come from his permission string:
+            //   - branch-management keys (branches.*, branch logs) => his "manager permissions",
+            //   - in-branch keys (staff, inventory, orders, foods, categories, tables, logs, discounts)
+            //     => what he may do INSIDE the branches he manages.
+            // Which branches he may act on is governed separately by allowed_branches / manager_scope.
+            return !empty(self::permissionMap($employee)[$permission]);
+        }
+
+        $allowed = self::roleAllowedPermissions($employee);
+        if ($allowed !== null && !isset($allowed[$permission])) {
+            return false;
         }
 
         $map = self::permissionMap($employee);
@@ -164,6 +251,22 @@ class controllersHelper
         $baseRestaurantId = (int) ($employee['restaurant_id'] ?? 0);
         if ($baseRestaurantId <= 0 || $baseRestaurantId === $restaurantId) {
             return $baseRestaurantId === $restaurantId;
+        }
+
+        $allowedBranches = trim((string) ($employee['allowed_branches'] ?? $employee['managed_branches'] ?? ''));
+        if ($allowedBranches !== '' && strtolower($allowedBranches) !== 'all') {
+            $managedIds = array_map('intval', array_filter(array_map('trim', explode(',', $allowedBranches))));
+            if (in_array($restaurantId, $managedIds, true)) {
+                return true;
+            }
+
+            if (!empty($employee['is_manager'])) {
+                return false;
+            }
+        }
+
+        if (strtolower($allowedBranches) !== 'all' && (string) ($employee['manager_scope'] ?? '') === 'none') {
+            return false;
         }
 
         try {

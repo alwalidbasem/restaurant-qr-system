@@ -1,4 +1,5 @@
 <?php
+/** @var array $admin_context Injected by public/admin/view.php before include. */
 $canCreate = admin_can($admin_context, 'restaurants.create');
 $canUpdate = admin_can($admin_context, 'restaurants.update');
 $canDelete = admin_can($admin_context, 'restaurants.delete');
@@ -16,6 +17,7 @@ $canAdd = $canCreate || $canCreateBranch;
     'branches_update' => $canUpdateBranch,
     'branches_delete' => $canDeleteBranch
   ], JSON_UNESCAPED_SLASHES); ?>;
+  window.OWNER_FULL_PERMISSIONS = null;
 </script>
 
 <div class="card mb-3">
@@ -29,7 +31,7 @@ $canAdd = $canCreate || $canCreateBranch;
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+      <table class="table table-hover align-middle mb-0 restaurants-table">
         <thead>
           <tr>
             <th>Brand / Branch</th>
@@ -100,6 +102,88 @@ $canAdd = $canCreate || $canCreateBranch;
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="ownerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <form class="modal-content admin-form-modal owner-form-modal" id="ownerForm" autocomplete="off">
+      <div class="modal-header owner-modal-header">
+        <div class="owner-modal-heading">
+          <div class="owner-modal-icon"><i class="bi bi-person-badge-fill"></i></div>
+          <div>
+            <h1 class="modal-title fs-5">Add Owner</h1>
+            <div class="modal-subtitle">Create a full-access operator account for this brand.</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="ownerFormAlert"></div>
+        <input type="hidden" id="ownerRestaurantId">
+
+        <div class="modal-form-grid">
+          <div class="modal-media-panel owner-media-panel">
+            <div class="image-upload-preview owner-image-upload-preview" id="ownerPfpPreview">
+              <i class="bi bi-person"></i>
+            </div>
+            <label class="form-label fw-semibold" for="ownerPfpFile">Profile Image</label>
+            <input class="form-control" id="ownerPfpFile" type="file" accept="image/*">
+            <div class="form-text">Standard: JPEG/PNG/WEBP, scanned &amp; optimised to WEBP. Max 5MB.</div>
+          </div>
+
+          <div>
+            <div class="owner-section-title">Account Information</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label" for="ownerName">Full Name</label>
+                <div class="owner-input-group">
+                  <i class="bi bi-person"></i>
+                  <input class="form-control" id="ownerName" placeholder="e.g. Ahmed Alwaleed" required>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="ownerUsername">Username</label>
+                <div class="owner-input-group">
+                  <i class="bi bi-at"></i>
+                  <input class="form-control" id="ownerUsername" placeholder="owner username" required>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="ownerPassword">Password</label>
+                <div class="owner-input-group">
+                  <i class="bi bi-lock"></i>
+                  <input class="form-control" id="ownerPassword" type="password" minlength="8" placeholder="Min. 8 characters" required>
+                  <span class="owner-password-toggle" id="ownerPasswordToggle"><i class="bi bi-eye"></i></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="owner-section-title mt-4">Contact Details</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="ownerPhone">Phone Number</label>
+                <div class="owner-input-group">
+                  <i class="bi bi-telephone"></i>
+                  <input class="form-control" id="ownerPhone" placeholder="+962 7XXXXXXXX" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="ownerEmail">Email Address</label>
+                <div class="owner-input-group">
+                  <i class="bi bi-envelope"></i>
+                  <input class="form-control" id="ownerEmail" type="email" placeholder="owner@example.com">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Owner</button>
       </div>
     </form>
   </div>

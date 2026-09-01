@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS food_addons;
 DROP TABLE IF EXISTS menu_foods;
 DROP TABLE IF EXISTS menu_categories;
 DROP TABLE IF EXISTS inventory;
-DROP TABLE IF EXISTS employees;
+DROP TABLE IF EXISTS staff;
 DROP TABLE IF EXISTS restaurants;
 DROP TABLE IF EXISTS migrations;
 
@@ -39,20 +39,30 @@ CREATE TABLE restaurants (
     FOREIGN KEY (parent_restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE employees (
+CREATE TABLE staff (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    username VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     pfp VARCHAR(255) NULL,
-    description TEXT NULL,
-    role ENUM('owner', 'manager', 'chef', 'inventory_manager', 'cashier', 'delivery_manager') NOT NULL DEFAULT 'delivery_manager',
+    details TEXT NULL,
+    hidden_details TEXT NULL,
     salary DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     branch_id INT UNSIGNED NULL,
+    is_superadmin TINYINT(1) NOT NULL DEFAULT 0,
+    is_owner TINYINT(1) NOT NULL DEFAULT 0,
+    is_manager TINYINT(1) NOT NULL DEFAULT 0,
+    is_employee TINYINT(1) NOT NULL DEFAULT 1,
+    allowed_branches VARCHAR(500) NULL,
+    manager_scope ENUM('all', 'some', 'none') NULL,
+    managed_branches VARCHAR(500) NULL,
+    phone VARCHAR(255) NULL,
+    email VARCHAR(255) NULL,
     permissions VARCHAR(500) DEFAULT '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0',
     restaurant_id INT UNSIGNED NOT NULL,
     API_KEY VARCHAR(255) NULL,
     API_KEY_EXPIRY_DATE DATETIME NULL,
+    UNIQUE KEY unique_staff_username_restaurant (restaurant_id, username),
     FOREIGN KEY (branch_id) REFERENCES restaurants(id) ON DELETE SET NULL ON UPDATE CASCADE,
     FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -394,5 +404,5 @@ CREATE TABLE activity_logs (
     INDEX idx_activity_logs_permission (permission_key),
     INDEX idx_activity_logs_employee (employee_id),
     FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL ON UPDATE CASCADE
+    FOREIGN KEY (employee_id) REFERENCES staff(id) ON DELETE SET NULL ON UPDATE CASCADE
 );

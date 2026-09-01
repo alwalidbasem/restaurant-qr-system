@@ -64,9 +64,9 @@ class ActivityLogsController
                     'branches.create',
                     'branches.update',
                     'branches.delete',
-                    'employees.create',
-                    'employees.update',
-                    'employees.delete',
+                    'staff.create',
+                    'staff.update',
+                    'staff.delete',
                 ];
             }
         }

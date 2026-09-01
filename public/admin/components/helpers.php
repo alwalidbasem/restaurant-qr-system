@@ -43,8 +43,7 @@ function admin_context(PDO $conn): array
             $isSuperAdmin
             || controllersHelper::employeeCanAccessRestaurant($conn, $employee, $selectedRestaurantId)
         );
-    $role = strtolower((string) ($employee['role'] ?? ''));
-    $defaultRestaurantId = in_array($role, ['owner', 'manager'], true)
+    $defaultRestaurantId = !empty($employee['is_owner']) || !empty($employee['is_manager']) || !empty($employee['manager_scope'])
         ? (int) ($employee['restaurant_id'] ?? 0)
         : controllersHelper::effectiveRestaurantId($employee);
     $activeRestaurantId = $canUseSelectedRestaurant
@@ -94,7 +93,19 @@ function admin_context_restaurant(PDO $conn, int $restaurantId): ?array
 function admin_can(array $context, string $permission): bool
 {
     if (!empty($context['is_super_admin'])) {
+        if (in_array($permission, ['restaurants.create', 'restaurants.get', 'restaurants.update', 'restaurants.delete'], true)) {
+            return !empty($context['permissions'][$permission]);
+        }
         return true;
+    }
+
+    $employee = is_array($context['employee'] ?? null) ? $context['employee'] : [];
+    if (!empty($employee['is_owner'])) {
+        return !isset((controllersHelper::permissionRoleDefinitions()['is_superadmin'] ?? [])[$permission]);
+    }
+
+    if (!empty($employee['is_manager'])) {
+        return !empty($context['permissions'][$permission]);
     }
 
     return !empty($context['permissions'][$permission]);
@@ -109,13 +120,18 @@ function admin_page_allowed(array $context, string $page): bool
             && (int) ($activeRestaurant['branch_management_enabled'] ?? 0) === 1
         );
 
-    $brandPages = !empty($context['is_super_admin'])
+    $employee = is_array($context['employee'] ?? null) ? $context['employee'] : [];
+    $isOwner = !empty($employee['is_owner']);
+    $brandPages = !empty($context['is_super_admin']) || $isOwner
         ? ['dashboard', 'restaurants', 'managers', 'log', 'logout']
         : ['dashboard', 'restaurants', 'log', 'logout'];
     if ($isBranchBrandContext && !in_array($page, $brandPages, true)) {
         return false;
     }
 
+    if ($page === 'dashboard' && $isBranchBrandContext) {
+        return admin_can($context, 'branches_dashboard.get');
+    }
     if (
         $page === 'restaurants'
         && empty($context['is_super_admin'])
@@ -137,15 +153,15 @@ function admin_page_allowed(array $context, string $page): bool
 
     $required = [
         'restaurants' => 'restaurants.get',
+        'dashboard' => 'dashboard.get',
         'orders' => 'orders.get',
         'takeaway' => 'orders.get',
         'tables' => 'tables.get',
         'inventory' => 'inventory.get',
         'discounts' => 'discounts.get',
         'invoices' => 'restaurant.update',
-        'staff' => 'employees.get',
-        'employees' => 'employees.get',
-        'managers' => 'employees.get',
+        'staff' => 'staff.get',
+        'managers' => 'staff.get',
         'log' => 'logs.get',
         'settings' => 'restaurant.update',
     ];
@@ -167,6 +183,32 @@ function admin_page_allowed(array $context, string $page): bool
     }
 
     return admin_can($context, $required[$page]);
+}
+
+function admin_default_page(array $context): string
+{
+    $activeRestaurant = is_array($context['active_restaurant'] ?? null) ? $context['active_restaurant'] : [];
+    $isBranchBrandContext = !empty($context['is_branch_brand_context'])
+        || (
+            empty($activeRestaurant['parent_restaurant_id'])
+            && (int) ($activeRestaurant['branch_management_enabled'] ?? 0) === 1
+        );
+
+    if (!empty($context['is_super_admin']) && empty($context['selected_restaurant_id'])) {
+        return 'restaurants';
+    }
+
+    $pages = $isBranchBrandContext
+        ? ['dashboard', 'restaurants', 'log']
+        : ['dashboard', 'orders', 'tables', 'menu', 'inventory', 'discounts', 'invoices', 'staff', 'log', 'settings'];
+
+    foreach ($pages as $page) {
+        if (admin_page_allowed($context, $page)) {
+            return $page;
+        }
+    }
+
+    return 'logout';
 }
 
 function admin_url(string $page, array $context = [], array $extra = []): string

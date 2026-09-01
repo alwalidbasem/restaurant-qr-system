@@ -1,4 +1,5 @@
 <?php
+/** @var array $admin_context Injected by public/admin/view.php before include. */
 include(__DIR__ . '/../../../config/variables.php');
 
 $active_page = $active_page ?? 'dashboard';
@@ -12,6 +13,7 @@ $isBranchBrandSidebar = !empty($admin_context['is_branch_brand_context'])
         empty($activeRestaurant['parent_restaurant_id'])
         && (int) ($activeRestaurant['branch_management_enabled'] ?? 0) === 1
     );
+$isOwner = !empty($admin_context['employee']['is_owner']);
 
 if (!empty($admin_context['is_super_admin'])) {
     $admin_nav['restaurants'] = ['icon' => 'bi-buildings-fill', 'label' => 'Restaurants', 'permission' => 'restaurants.get'];
@@ -19,7 +21,7 @@ if (!empty($admin_context['is_super_admin'])) {
 
 if (empty($admin_context['is_super_admin']) || !empty($admin_context['selected_restaurant_id']) || $isBranchBrandSidebar) {
     $admin_nav += [
-        'dashboard' => ['icon' => 'bi-grid-1x2-fill', 'label' => 'Dashboard'],
+        'dashboard' => ['icon' => 'bi-grid-1x2-fill', 'label' => 'Dashboard', 'permission' => 'dashboard.get'],
         'orders' => ['icon' => 'bi-receipt', 'label' => 'Orders', 'permission' => 'orders.get'],
         'cashier' => [
             'icon' => 'bi-cash-register',
@@ -42,7 +44,7 @@ if (empty($admin_context['is_super_admin']) || !empty($admin_context['selected_r
         'inventory' => ['icon' => 'bi-box-seam', 'label' => 'Inventory', 'permission' => 'inventory.get'],
         'discounts' => ['icon' => 'bi-percent', 'label' => 'Discounts', 'permission' => 'discounts.get'],
         'invoices' => ['icon' => 'bi-file-earmark-text', 'label' => 'Invoices', 'permission' => 'restaurant.update'],
-        'staff' => ['icon' => 'bi-people-fill', 'label' => 'Staff', 'permission' => 'employees.get'],
+        'staff' => ['icon' => 'bi-people-fill', 'label' => 'Staff', 'permission' => 'staff.get'],
         'log' => ['icon' => 'bi-chat-left-text', 'label' => 'Activity Log', 'permission' => 'logs.get'],
     ];
 }
@@ -57,8 +59,9 @@ if ($isBranchBrandSidebar) {
             'log' => ['icon' => 'bi-chat-left-text', 'label' => 'Logs'],
         ]
         : [
-            'dashboard' => ['icon' => 'bi-grid-1x2-fill', 'label' => 'Dashboard'],
+            'dashboard' => ['icon' => 'bi-grid-1x2-fill', 'label' => 'Dashboard', 'permission' => 'branches_dashboard.get'],
             'restaurants' => ['icon' => 'bi-buildings-fill', 'label' => 'Branches', 'permission' => 'branches.get'],
+            ...($isOwner ? ['managers' => ['icon' => 'bi-person-gear', 'label' => 'Managers']] : []),
             'log' => ['icon' => 'bi-chat-left-text', 'label' => 'Managers Logs', 'permission' => 'branches_logs.get'],
         ];
 }

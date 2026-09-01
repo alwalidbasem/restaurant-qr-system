@@ -40,9 +40,8 @@ $pages = [
     'tables'       => 'tables.php',
     'inventory'    => 'inventory.php',
     'invoices'     => 'invoices.php',
-    'staff'        => 'employees.php',
-    'employees'    => 'employees.php',
-    'managers'     => 'employees.php',
+    'staff'        => 'staff.php',
+    'managers'     => 'staff.php',
     'discounts'    => 'discounts.php',
     'log'          => 'log.php',
     'settings'     => 'settings.php',
@@ -58,7 +57,6 @@ $sections = [
     'inventory'    => 'Inventory',
     'invoices'     => 'Invoices',
     'staff'        => 'Staff',
-    'employees'    => 'Staff',
     'managers'     => 'Managers',
     'discounts'    => 'Discounts',
     'log'          => 'Activity Log',
@@ -68,8 +66,21 @@ $sections = [
 
 $template = [
     'body'   => '',
-    'footer' =>
-        '<script src="' . htmlspecialchars(admin_asset_url('js/dashboard.js'), ENT_QUOTES) . '"></script>',
+    'footer' => '',
+];
+
+$pageScripts = [
+    'dashboard'   => 'pages/dashboard.js',
+    'restaurants' => 'pages/restaurants.js',
+    'orders'      => 'pages/orders.js',
+    'menu'        => 'pages/menu.js',
+    'inventory'   => 'pages/inventory.js',
+    'invoices'    => 'pages/invoices.js',
+    'staff'       => 'pages/staff.js',
+    'managers'    => 'pages/staff.js',
+    'discounts'   => 'pages/discounts.js',
+    'log'         => 'pages/log.js',
+    'settings'    => 'pages/settings.js',
 ];
 
 $template['header']['body'] =
@@ -97,7 +108,7 @@ ob_start();
 if(!$isAuth){
     $template['title'] = 'Login | Savora Admin';
     $template['footer'] .=
-    '<script src="' . htmlspecialchars(admin_asset_url('js/login.js'), ENT_QUOTES) . '"></script>';
+    '<script src="' . htmlspecialchars(admin_asset_url('js/auth/login.js'), ENT_QUOTES) . '"></script>';
     $auth_layout = true;
     include __DIR__ . '/pages/login.php';
 }else{
@@ -107,7 +118,7 @@ if(!$isAuth){
     }
 
     if (!admin_page_allowed($admin_context, $page)) {
-        header('Location: ' . admin_url('dashboard', $admin_context));
+        header('Location: ' . admin_url(admin_default_page($admin_context), $admin_context));
         exit;
     }
 
@@ -127,6 +138,16 @@ if(!$isAuth){
     } else {
         $placeholder_title = $sections[$page] ?? ucfirst($page);
         echo section_placeholder($placeholder_title);
+    }
+
+    $template['footer'] .=
+        '<script src="' . htmlspecialchars(admin_asset_url('js/shared/common.js'), ENT_QUOTES) . '"></script>' .
+        '<script src="' . htmlspecialchars(admin_asset_url('js/shared/ui.js'), ENT_QUOTES) . '"></script>' .
+        '<script src="' . htmlspecialchars(admin_asset_url('js/shared/charts.js'), ENT_QUOTES) . '"></script>';
+
+    if (isset($pageScripts[$page])) {
+        $template['footer'] .=
+            '<script src="' . htmlspecialchars(admin_asset_url('js/' . $pageScripts[$page]), ENT_QUOTES) . '"></script>';
     }
 }
 

@@ -263,7 +263,7 @@ class Restaurant
                 ON profits.restaurant_id = branches.id
             LEFT JOIN (
                 SELECT branch_id, COALESCE(SUM(salary), 0) AS total_salary
-                FROM employees
+                FROM staff
                 WHERE branch_id IS NOT NULL
                 GROUP BY branch_id
             ) salaries

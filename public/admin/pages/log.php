@@ -1,6 +1,7 @@
 <?php
+/** @var array $admin_context Injected by public/admin/view.php before include. */
 $restaurantId = (int) ($admin_context['active_restaurant_id'] ?? 0);
-$permissions = require __DIR__ . '/../../../api/Middleware/permissions_config/definitions.php';
+$permissions = controllersHelper::permissionDefinitions();
 $brandLogMode = !empty($admin_context['is_branch_brand_context']);
 ?>
 <script>
@@ -14,9 +15,10 @@ $brandLogMode = !empty($admin_context['is_branch_brand_context']);
           'branches.create',
           'branches.update',
           'branches.delete',
-          'employees.create',
-          'employees.update',
-          'employees.delete',
+          'managers_log.get',
+          'staff.create',
+          'staff.update',
+          'staff.delete',
       ] : [],
   ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 </script>

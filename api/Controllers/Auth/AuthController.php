@@ -105,11 +105,16 @@ class AuthController
 
     private function sanitizeEmployee(array $employee): array
     {
+        if (!controllersHelper::isSuperAdminEmployee($employee)) {
+            unset($employee['hidden_details']);
+        }
+
         unset(
             $employee['password'],
             $employee['API_KEY'],
             $employee['API_KEY_EXPIRY_DATE'],
-            $employee['main_code']
+            $employee['main_code'],
+            $employee['branch_code']
         );
 
         return $employee;
@@ -206,14 +211,18 @@ class AuthController
         }
 
         $employee = $this->authModel->getEmployeeByUsername(
-            trim((string) $data['username'])
+            trim((string) $data['username']),
+            trim((string) $data['restaurant_code'])
         );
 
         if (!$employee) {
             return $this->invalidCredentials();
         }
 
-        if (strcasecmp((string) ($employee['main_code'] ?? ''), trim((string) $data['restaurant_code'])) !== 0) {
+        $restaurantCode = trim((string) $data['restaurant_code']);
+        $brandCodeMatches = strcasecmp((string) ($employee['main_code'] ?? ''), $restaurantCode) === 0;
+        $branchCodeMatches = strcasecmp((string) ($employee['branch_code'] ?? ''), $restaurantCode) === 0;
+        if (!$brandCodeMatches && !$branchCodeMatches) {
             return $this->invalidCredentials();
         }
 

@@ -17,11 +17,11 @@ INSERT INTO invoice_counters (restaurant_id, next_number) VALUES
 (2, 2),
 (3, 1);
 
-INSERT INTO employees (id, name, username, password, pfp, description, role, salary, branch_id, permissions, restaurant_id) VALUES
-(1, 'Platform Admin', 'admin', '$argon2id$v=19$m=19456,t=2,p=1$TnBIYU9uc2dGS0hZemxHbg$pT5kH/cStyshxmbn88462NA3XttKZz/hXtrSN00B/OU', '/Portfolio/public/uploads/admin/staff/admin.jpg', 'Super admin user. Login with restaurant code ADMIN001.', 'owner', 0.00, NULL, '1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1', 1),
-(2, 'Alwalid Owner', 'alwalid', '$argon2id$v=19$m=19456,t=2,p=1$blZnUW5kSlU0VW1aTEdFVQ$Zz21EkeNcx8sTAzb8gLoz/nQQ2uszH8xNR6/bn9bdio', '/Portfolio/public/uploads/admin/staff/alwalid.jpg', 'Restaurant owner with full local permissions.', 'owner', 1200.00, NULL, '0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1', 2),
-(3, 'Ahmad Cashier', 'ahmad', '$argon2id$v=19$m=19456,t=2,p=1$WHREMGl5a1F5SHd6UUo2Ng$QRurNYlPbyZB4OB7BH89BhHXbPZl7MpQaXckdfsvQLQ', '/Portfolio/public/uploads/admin/staff/ahmad.jpg', 'Cashier focused on orders, tables, invoices, and logs.', 'cashier', 450.00, 4, '0,0,0,0,1,0,1,0,0,1,0,1,0,0,1,1,1,1,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0', 2),
-(4, 'Maya Chef', 'maya', '$argon2id$v=19$m=19456,t=2,p=1$Rk1OOU50aDNSTEFydFFRQw$NaG8wkqTW0RW7bEEdjKlU8px7Z8EjZQytm5WfkxNh40', '/Portfolio/public/uploads/admin/staff/maya.jpg', 'Chef can view orders and update food status.', 'chef', 500.00, 5, '0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0', 2);
+INSERT INTO staff (id, name, username, password, pfp, details, hidden_details, salary, branch_id, is_superadmin, is_owner, is_manager, is_employee, allowed_branches, manager_scope, managed_branches, phone, email, permissions, restaurant_id) VALUES
+(1, 'Platform Admin', 'admin', '$argon2id$v=19$m=19456,t=2,p=1$TnBIYU9uc2dGS0hZemxHbg$pT5kH/cStyshxmbn88462NA3XttKZz/hXtrSN00B/OU', '/Portfolio/public/uploads/admin/staff/admin.jpg', 'Super admin user. Login with restaurant code ADMIN001.', 'Internal platform administrator account.', 0.00, NULL, 1, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, '1,1,1,1', 1),
+(2, 'Alwalid Owner', 'alwalid', '$argon2id$v=19$m=19456,t=2,p=1$blZnUW5kSlU0VW1aTEdFVQ$Zz21EkeNcx8sTAzb8gLoz/nQQ2uszH8xNR6/bn9bdio', '/Portfolio/public/uploads/admin/staff/alwalid.jpg', 'Restaurant owner with full local permissions.', NULL, 1200.00, NULL, 0, 1, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, 2),
+(3, 'Ahmad Cashier', 'ahmad', '$argon2id$v=19$m=19456,t=2,p=1$WHREMGl5a1F5SHd6UUo2Ng$QRurNYlPbyZB4OB7BH89BhHXbPZl7MpQaXckdfsvQLQ', '/Portfolio/public/uploads/admin/staff/ahmad.jpg', 'Cashier focused on orders, tables, invoices, and logs.', NULL, 450.00, 4, 0, 0, 0, 1, NULL, NULL, NULL, NULL, NULL, '0,1,0,1,0,0,1,1,1,1,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0', 2),
+(4, 'Maya Chef', 'maya', '$argon2id$v=19$m=19456,t=2,p=1$Rk1OOU50aDNSTEFydFFRQw$NaG8wkqTW0RW7bEEdjKlU8px7Z8EjZQytm5WfkxNh40', '/Portfolio/public/uploads/admin/staff/maya.jpg', 'Chef can view orders and update food status.', NULL, 500.00, 5, 0, 0, 0, 1, NULL, NULL, NULL, NULL, NULL, '0,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0', 2);
 
 INSERT INTO menu_categories (id, name_ar, name_en, description_ar, description_en, restaurant_id) VALUES
 (1, 'Burgers', 'Burgers', 'Burger meals and sandwiches', 'Burger meals and sandwiches', 2),

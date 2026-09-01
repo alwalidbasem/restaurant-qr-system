@@ -1,4 +1,5 @@
 <?php
+/** @var array $admin_context Injected by public/admin/view.php before include. */
 $canCreateInventory = admin_can($admin_context, 'inventory.create');
 $canUpdateInventory = admin_can($admin_context, 'inventory.update');
 $canDeleteInventory = admin_can($admin_context, 'inventory.delete');

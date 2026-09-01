@@ -1,4 +1,5 @@
 <?php
+/** @var array $admin_context Injected by public/admin/view.php before include. */
 $restaurantId = (int) ($admin_context['active_restaurant_id'] ?? 0);
 $canCreateDiscounts = admin_can($admin_context, 'discounts.create');
 $canUpdateDiscounts = admin_can($admin_context, 'discounts.update');

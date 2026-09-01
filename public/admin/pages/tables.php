@@ -1,4 +1,5 @@
 <?php
+/** @var array $admin_context Injected by public/admin/view.php before include. */
 $canCreateTables = admin_can($admin_context, 'tables.create');
 $canUpdateTables = admin_can($admin_context, 'tables.update');
 $canDeleteTables = admin_can($admin_context, 'tables.delete');

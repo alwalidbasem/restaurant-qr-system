@@ -7,7 +7,7 @@ require_once __DIR__ . '/../api/Controllers/Tables/TablesController.php';
 require_once __DIR__ . '/../api/Controllers/Food/FoodController.php';
 require_once __DIR__ . '/../api/Controllers/Categories/CategoriesController.php';
 require_once __DIR__ . '/../api/Controllers/Restaurant/RestaurantController.php';
-require_once __DIR__ . '/../api/Controllers/Employee/EmployeeController.php';
+require_once __DIR__ . '/../api/Controllers/Staff/StaffController.php';
 require_once __DIR__ . '/../api/Controllers/Auth/AuthController.php';
 require_once __DIR__ . '/../api/Controllers/Inventory/InventoryController.php';
 require_once __DIR__ . '/../api/Controllers/RestaurantTaxSettings/RestaurantTaxSettingsController.php';
@@ -35,7 +35,7 @@ $PermissionsMiddleware = new PermissionsMiddleware($conn);
 if ($resource === 'uploads' && $method === 'POST') {
     $uploadType = preg_replace('/[^a-z0-9_-]/i', '', (string) ($_POST['type'] ?? 'general')) ?: 'general';
     $allowedPermissions = match ($uploadType) {
-        'staff' => ['employees.create', 'employees.update'],
+        'staff' => ['staff.create', 'staff.update'],
         'foods' => ['foods.create', 'foods.update'],
         'website' => ['restaurant.update'],
         'website-logo' => ['restaurant.update'],
@@ -109,8 +109,7 @@ if ($resource === 'admin' && ($segments[2] ?? null) === 'context' && $method ===
             $isSuperAdmin
             || controllersHelper::employeeCanAccessRestaurant($conn, $employee, $selectedRestaurantId)
         );
-    $role = strtolower((string) ($employee['role'] ?? ''));
-    $defaultRestaurantId = in_array($role, ['owner', 'manager'], true)
+    $defaultRestaurantId = !empty($employee['is_owner']) || !empty($employee['is_manager']) || !empty($employee['manager_scope'])
         ? (int) ($employee['restaurant_id'] ?? 0)
         : controllersHelper::effectiveRestaurantId($employee);
     $activeRestaurantId = $canUseSelectedRestaurant
@@ -212,7 +211,7 @@ if ($resource === 'restaurants') {
     }
 
     if ($method === 'GET' && $id !== null && $action === 'branches-dashboard') {
-        requireBranchManagerPermission($conn, $id, 'branches.get');
+        requireBranchManagerPermission($conn, $id, 'branches_dashboard.get');
         guardRestaurantAccess($conn, $id, 'branches-dashboard');
         jsonResponse($controller->branchesDashboard($id));
         exit;
@@ -285,40 +284,40 @@ if ($resource === 'invoices') {
 }
 
 
-if ($resource === 'employees') {
-    $controller = new EmployeeController($conn);
+if ($resource === 'staff') {
+    $controller = new StaffController($conn);
 
     if ($method === 'GET' && $id === null) {
-        $PermissionsMiddleware->isQualifiedEmployee('employees.get');
+        $PermissionsMiddleware->isQualifiedEmployee('staff.get');
         jsonResponse($controller->index());
         exit;
     }
 
     if ($method === 'GET' && $id !== null && $action === null) {
-        $PermissionsMiddleware->isQualifiedEmployee('employees.get');
-        guardExistingResourceAccess($conn, 'employees', $id);
+        $PermissionsMiddleware->isQualifiedEmployee('staff.get');
+        guardExistingResourceAccess($conn, 'staff', $id);
         jsonResponse($controller->show($id));
         exit;
     }
 
     if ($method === 'POST' && $id === null) {
-        $PermissionsMiddleware->isQualifiedEmployee('employees.create');
-        guardRestaurantAccess($conn, requestRestaurantId(), 'employees');
+        $PermissionsMiddleware->isQualifiedEmployee('staff.create');
+        guardRestaurantAccess($conn, requestRestaurantId(), 'staff');
         $controller->store();
         exit;
     }
 
     if ($method === 'PUT' && $id !== null && $action === null) {
-        $PermissionsMiddleware->isQualifiedEmployee('employees.update');
-        guardExistingResourceAccess($conn, 'employees', $id);
-        guardRequestedRestaurantAccess($conn, 'employees');
+        $PermissionsMiddleware->isQualifiedEmployee('staff.update');
+        guardExistingResourceAccess($conn, 'staff', $id);
+        guardRequestedRestaurantAccess($conn, 'staff');
         $controller->update($id);
         exit;
     }
 
     if ($method === 'DELETE' && $id !== null && $action === null) {
-        $PermissionsMiddleware->isQualifiedEmployee('employees.delete');
-        guardExistingResourceAccess($conn, 'employees', $id);
+        $PermissionsMiddleware->isQualifiedEmployee('staff.delete');
+        guardExistingResourceAccess($conn, 'staff', $id);
         $controller->destroy($id);
         exit;
     }
@@ -760,10 +759,9 @@ function requireBranchManagerPermission(PDO $conn, ?int $restaurantId, string $p
     }
 
     $brandId = branchBrandId($conn, (int) ($restaurantId ?? 0));
-    $role = strtolower((string) ($employee['role'] ?? ''));
     if (
         $brandId > 0
-        && in_array($role, ['owner', 'manager'], true)
+        && (!empty($employee['is_owner']) || !empty($employee['is_manager']) || !empty($employee['manager_scope']))
         && controllersHelper::employeeCanAccessRestaurant($conn, $employee, $brandId)
         && branchManagementEnabled($conn, $brandId)
         && controllersHelper::employeeHasPermission($employee, $permission)
@@ -850,7 +848,7 @@ function isSuperAdminEmployee(array $employee): bool
 function resourceRestaurantId(PDO $conn, string $resource, int $id): ?int
 {
     $map = [
-        'employees' => ['table' => 'employees', 'key' => 'id'],
+        'staff' => ['table' => 'staff', 'key' => 'id'],
         'inventory' => ['table' => 'inventory', 'key' => 'id'],
         'food-addons' => ['table' => 'food_addons', 'key' => 'id'],
         'discounts' => ['table' => 'discounts', 'key' => 'id'],

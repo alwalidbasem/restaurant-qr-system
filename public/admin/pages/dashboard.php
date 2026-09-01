@@ -1,4 +1,5 @@
 <?php
+/** @var array $admin_context Injected by public/admin/view.php before include. */
 // Dashboard page (body only). Rendered inside the admin layout template.
 $branch_dashboard_only = !empty($admin_context['is_branch_brand_context']);
 ?>

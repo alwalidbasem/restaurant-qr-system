@@ -1,16 +1,7 @@
 <?php
 
-class EmployeeValidator
+class StaffValidator
 {
-    private array $allowedRoles = [
-        'owner',
-        'manager',
-        'chef',
-        'inventory_manager',
-        'cashier',
-        'delivery_manager'
-    ];
-
     public function validateCreate(array $data): array
     {
         $errors = [];
@@ -25,12 +16,14 @@ class EmployeeValidator
             $errors['password'] = 'Password must be at least 8 characters.';
         }
 
-        if (isset($data['role']) && !in_array($data['role'], $this->allowedRoles, true)) {
-            $errors['role'] = 'Invalid employee role.';
-        }
-
         if (isset($data['permissions']) && !is_string($data['permissions'])) {
             $errors['permissions'] = 'Permissions must be a comma-separated string.';
+        }
+
+        foreach (['details', 'hidden_details'] as $field) {
+            if (isset($data[$field]) && $data[$field] !== null && !is_string($data[$field])) {
+                $errors[$field] = ucfirst(str_replace('_', ' ', $field)) . ' must be text.';
+            }
         }
 
         if (isset($data['salary']) && (

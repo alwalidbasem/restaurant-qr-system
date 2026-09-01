@@ -12,10 +12,28 @@ class PermissionsMiddleware
     public function __construct(PDO $conn)
     {
         $this->conn = $conn;
-        $this->permissions = require __DIR__ . '/../Middleware/permissions_config/definitions.php';
+        $this->permissions = class_exists('controllersHelper')
+            ? controllersHelper::permissionDefinitions()
+            : $this->flattenPermissionDefinitions(require __DIR__ . '/../Middleware/permissions_config/definitions.php');
         $this->public_data = require __DIR__ . '/../Middleware/permissions_config/public_data.php';
         $webAdmins = require __DIR__ . '/../Middleware/permissions_config/restaurant_crud_admins.php';
         $this->webAdmins = array_map('intval', $webAdmins['employee_ids'] ?? $webAdmins);
+    }
+
+    private function flattenPermissionDefinitions(array $definitions): array
+    {
+        if (!isset($definitions['is_superadmin']) && !isset($definitions['is_owner']) && !isset($definitions['is_manager']) && !isset($definitions['is_employee'])) {
+            return $definitions;
+        }
+
+        $flat = [];
+        foreach (['is_superadmin', 'is_manager', 'is_employee'] as $role) {
+            foreach (($definitions[$role] ?? []) ?: [] as $key => $label) {
+                $flat[$key] = $label;
+            }
+        }
+
+        return $flat;
     }
 
     // STEP ONE GET API-KEY if exists (FROM COOKIES)
@@ -148,7 +166,28 @@ class PermissionsMiddleware
 
     public function isQualifiedEmployee(string $permission,bool $isArray = false): bool {
         if ($this->isSuperAdmin()) {
+            $AuthController = new AuthController($this->conn, true);
+            $super = $AuthController->isAuth()['data']['employee'] ?? null;
+            if (is_array($super) && class_exists('controllersHelper')) {
+                return controllersHelper::employeeHasPermission($super, $permission);
+            }
             return true;
+        }
+
+        $AuthController = new AuthController($this->conn, true);
+        $Auth = $AuthController->isAuth();
+        $employeeData = $Auth['data']['employee'] ?? null;
+        if (is_array($employeeData) && class_exists('controllersHelper')) {
+            if (controllersHelper::employeeHasPermission($employeeData, $permission)) {
+                return true;
+            }
+
+            if ($isArray) {
+                return false;
+            }
+
+            $this->deny(403, 'Permission denied: ' . $permission);
+            return false;
         }
 
         $employeePermissions = $this->employeePermissions();
@@ -193,6 +232,10 @@ class PermissionsMiddleware
         $isAuth = $Auth['data']['authenticated'];
         $employeeData = $Auth['data']['employee'];
         if($isAuth){
+            if (array_key_exists('is_superadmin', $employeeData)) {
+                return (int) ($employeeData['is_superadmin'] ?? 0) === 1;
+            }
+
             return ($employeeData['restaurant_id'] == 1 && in_array((int) $employeeData['id'], $this->webAdmins, true)) ? true : false;
         }else{
             return false;

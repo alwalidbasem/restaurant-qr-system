@@ -49,15 +49,24 @@ return [
         "success_color",
         "danger_color"
     ],
-    'employees.get' => [
+    'staff.get' => [
         "id",
         "name",
         "pfp",
-        "description",
-        "role",
+        "details",
+        "hidden_details",
         "salary",
         "branch_id",
         "branch_name",
+        "is_superadmin",
+        "is_owner",
+        "is_manager",
+        "is_employee",
+        "allowed_branches",
+        "manager_scope",
+        "managed_branches",
+        "phone",
+        "email",
         "restaurant_id",
         "restaurant_name"
     ],
@@ -197,6 +206,29 @@ return [
         "message",
         "metadata",
         "created_at"
+    ],
+    'managers_log.get' => [
+        "id",
+        "restaurant_id",
+        "branch_id",
+        "employee_id",
+        "employee_name",
+        "permission_key",
+        "entity_type",
+        "entity_id",
+        "action_label",
+        "message",
+        "metadata",
+        "created_at"
+    ],
+    'dashboard.get' => [
+        "id",
+        "restaurant_id"
+    ],
+    'branches_dashboard.get' => [
+        "id",
+        "restaurant_id",
+        "branch_id"
     ],
     'orders.get' => [
         "order_id",
